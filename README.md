@@ -183,3 +183,8 @@ Copy
 Edit
 ms-dns 8.8.8.8
 ms-dns 8.8.4.4
+
+
+## SPESIAL ALL OS UBUNTU - DEBIAN -----
+```
+-------- lxc exec legacy-script-env -- bash ------

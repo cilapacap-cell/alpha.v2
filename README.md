@@ -134,3 +134,49 @@ wget https://raw.githubusercontent.com/hokagelegend9999/alpha.v2/refs/heads/main
 ```
 
 
+1. Aktifkan IP Forwarding di server VPS (Ubuntu 20)
+Edit /etc/sysctl.conf, pastikan ada baris ini tidak dikomen (hapus tanda # jika ada):
+
+bash
+Copy
+Edit
+net.ipv4.ip_forward=1
+Kemudian jalankan perintah ini untuk apply:
+
+bash
+Copy
+Edit
+sudo sysctl -p
+2. Setup NAT dengan iptables (Supaya paket dari VPN client bisa keluar ke internet)
+Misal interface internet kamu adalah eth0 (lihat di ip a):
+
+bash
+Copy
+Edit
+sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+Lalu tambahkan aturan forward agar trafik dari VPN bisa diterima:
+
+bash
+Copy
+Edit
+sudo iptables -A FORWARD -i ppp+ -o eth0 -j ACCEPT
+sudo iptables -A FORWARD -i eth0 -o ppp+ -m state --state RELATED,ESTABLISHED -j ACCEPT
+ppp+ adalah interface yang dipakai PPTP (dynamic ppp interface).
+
+3. Simpan aturan iptables agar tetap aktif setelah reboot
+Install paket iptables-persistent:
+
+bash
+Copy
+Edit
+sudo apt-get install iptables-persistent
+sudo netfilter-persistent save
+4. Pastikan konfigurasi PPTP daemon /etc/ppp/options dan /etc/ppp/pptpd-options
+Biasanya sudah default benar, tapi kamu bisa cek dan pastikan ada:
+
+Di /etc/ppp/options:
+
+Copy
+Edit
+ms-dns 8.8.8.8
+ms-dns 8.8.4.4

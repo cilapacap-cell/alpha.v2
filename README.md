@@ -19,7 +19,10 @@ Fitur backup data VPS memungkinkan Anda menyimpan konfigurasi penting dengan mud
  <img src="https://github.com/hokagelegend9999/alpha.v2/blob/main/Screenshot%202025-04-23%20153225.png?raw=true alt="Backup Data VPS" width="400"/>
 </p>
 
-
+### DEPENDENSI 
+```
+sudo apt install dnsutils cron python3 gcc make build-essential zip unzip wget curl screen libz-dev g++ libreadline-dev libreadline-dev zlib1g-dev libssl-dev dos2unix cron vnstat mc jq bzip2 gzip vnstat coreutils rsyslog iftop git apt-transport-https build-essential earlyoom htop iptables jq python2 ruby cmake coreutils rsyslog net-tools nano sed gnupg gnupg1 bc jq dirmngr libxml-parser-perl lsof libsqlite3-dev python3-pip -y && python3 -m pip install --upgrade pip &&  python3 -m pip install tabulate && wget https://github.com/fians-xd/mmk/raw/refs/heads/main/shc.zip && unzip shc.zip && cd shc && sudo chmod +x * && sudo ./configure && sudo make && sudo make install && cd && rm -rf shc.zip shc
+```
 
 ### INSTALL SCRIPT 
 ```

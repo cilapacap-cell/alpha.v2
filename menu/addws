@@ -253,8 +253,7 @@ if [ ! -e /etc/vmess ]; then
 fi
 
 if [[ $iplimit -gt 0 ]]; then
-mkdir -p /etc/hokage/limit/vmess/ip
-echo -e "$iplimit" > /etc/hokage/limit/vmess/ip/$user
+echo -e "$iplimit" > /etc/vmess/${user}IP
 else
 echo > /dev/null
 fi

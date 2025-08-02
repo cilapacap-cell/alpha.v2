@@ -302,6 +302,7 @@ echo -e "🔰 Active Period:" | tee -a /etc/user-create/user.log
 echo -e "🔸 Created  : $tnggl" | tee -a /etc/user-create/user.log
 echo -e "🔸 Expired  : $expe" | tee -a /etc/user-create/user.log
 echo -e "\033[1;93m☉——————————————————————————☉\033[0m" | tee -a /etc/user-create/user.log
+echo -e "\033[0;34m☉ TERIMAKASIH SUDAH BERBELANJA DI PETARUKAN STORE☉\033[0m" | tee -a /etc/user-create/user.log
 
 read -p "Press any key to back to menu"
 menu

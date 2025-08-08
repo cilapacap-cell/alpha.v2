@@ -10,7 +10,7 @@ NC='\033[0m'
 
 MYIP=$(curl -sS icanhazip.com)
 data_ip="https://github.com/hokagelegend9999/ijin/raw/refs/heads/main/genom-pro"
-IZIN=$(curl -sS "$data_ip")
+IZIN=$(curl -sL "$data_ip")
 
 echo "Mengecek Izin Akses Script..."
 sleep 2

@@ -33,41 +33,86 @@ else
     echo -e "${RED}maaf hanya untuk pengguna SCRIPT ALPHA PRO${NC}"
     echo "IP VPS Anda: $MYIP tidak terdaftar."
     echo "Silakan hubungi admin untuk mendaftarkan IP Anda."
-    exit 0
+    exit 1
 fi
 # ==================================================
 #       AKHIR DARI SISTEM PERIZINAN
 # ==================================================
 
+# --- Cek file dependensi utama ---
+if [ ! -f /etc/xray/dns ] || [ ! -f /etc/slowdns/server.pub ] || [ ! -f /etc/xray/domain ]; then
+    echo -e "${RED}ERROR: File konfigurasi penting tidak ditemukan!${NC}"
+    echo "Pastikan Xray/SlowDNS sudah terinstal dan file berikut ada:"
+    echo "- /etc/xray/dns"
+    echo "- /etc/slowdns/server.pub"
+    echo "- /etc/xray/domain"
+    exit 1
+fi
 
-# Skrip Asli Anda Dimulai Dari Sini
-NS=$( cat /etc/xray/dns )
-PUB=$( cat /etc/slowdns/server.pub )
+NS=$(cat /etc/xray/dns)
+PUB=$(cat /etc/slowdns/server.pub)
 domain=$(cat /etc/xray/domain)
-#color
 grenbo="\e[92;1m"
 
-#install
-echo "Memulai instalasi paket yang dibutuhkan..."
-apt update > /dev/null 2>&1 && apt upgrade -y > /dev/null 2>&1
-apt install python3 python3-pip git -y > /dev/null 2>&1
+# --- Instalasi dengan Penanganan Error ---
+echo "Memulai instalasi paket yang dibutuhkan (unzip, wget, etc)..."
+apt-get update -y > /dev/null 2>&1
+apt-get install -y python3 python3-pip git unzip wget > /dev/null 2>&1
 echo "Instalasi paket selesai."
 sleep 1
 
 echo "Mengunduh dan menyiapkan file bot..."
-cd /usr/bin
+cd /usr/bin || exit
+
+# Hapus sisa file lama untuk instalasi bersih
+rm -rf bot.zip kyt.zip bot kyt
+
+# Download dan ekstrak file bot
 wget -q https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/bot.zip
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Gagal mengunduh file bot! Periksa koneksi internet Anda.${NC}"
+    exit 1
+fi
 unzip -o bot.zip > /dev/null 2>&1
-mv bot/* /usr/bin
+if [ ! -d "bot" ]; then
+    echo -e "${RED}Gagal mengekstrak file bot. Direktori 'bot' tidak ditemukan.${NC}"
+    rm -f bot.zip
+    exit 1
+fi
+mv bot/* /usr/bin/
 chmod +x /usr/bin/*
-rm -rf bot.zip
+rm -rf bot.zip bot
+
+# Download dan ekstrak file kyt
 wget -q https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/kyt.zip
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Gagal mengunduh file kyt! Periksa koneksi internet Anda.${NC}"
+    exit 1
+fi
 unzip -o kyt.zip > /dev/null 2>&1
+if [ ! -d "kyt" ]; then
+    echo -e "${RED}Gagal mengekstrak file kyt. Direktori 'kyt' tidak ditemukan.${NC}"
+    rm -f kyt.zip
+    exit 1
+fi
+
+# Instal dependensi Python
+if [ ! -f "kyt/requirements.txt" ]; then
+    echo -e "${RED}File 'kyt/requirements.txt' tidak ditemukan!${NC}"
+    rm -rf kyt kyt.zip
+    exit 1
+fi
 pip3 install -r kyt/requirements.txt > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Gagal menginstal dependensi Python dari requirements.txt!${NC}"
+    exit 1
+fi
+
 echo "Penyiapan file bot selesai."
 sleep 1
 clear
 
+# --- Input Konfigurasi Bot ---
 echo ""
 echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
 echo -e " \e[1;97;101m          ADD BOT PANEL          \e[0m"
@@ -90,7 +135,7 @@ echo -e PUB='"'$PUB'"' >> /usr/bin/kyt/var.txt
 echo -e HOST='"'$NS'"' >> /usr/bin/kyt/var.txt
 clear
 
-echo "Membuat layanan systemd untuk bot..."
+echo "Membuat dan mengaktifkan layanan bot..."
 cat > /etc/systemd/system/kyt.service << END
 [Unit]
 Description=Simple kyt - @kyt
@@ -104,25 +149,17 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 END
-echo "Layanan systemd berhasil dibuat."
-sleep 1
 
-echo "Menjalankan dan mengaktifkan bot..."
 systemctl daemon-reload
 systemctl enable kyt > /dev/null 2>&1
-systemctl start kyt
 systemctl restart kyt
 echo "Instalasi bot selesai."
 sleep 2
-
-# PINDAH KE DIREKTORI /root
 cd /root
 
 # ==================================================
 #           MENU MANAJEMEN BOT
 # ==================================================
-
-# Fungsi untuk memeriksa status bot
 check_status() {
     if systemctl is-active --quiet kyt; then
         echo -e "${GREEN}AKTIF${NC}"
@@ -131,7 +168,6 @@ check_status() {
     fi
 }
 
-# Loop menu utama
 while true; do
     clear
     echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
@@ -171,7 +207,7 @@ while true; do
         x|X)
             clear
             echo "Terima kasih telah menggunakan skrip ini."
-            break
+            exit 0
             ;;
         *)
             echo -e "${RED}Opsi tidak valid!${NC}"

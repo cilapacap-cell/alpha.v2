@@ -1,8 +1,46 @@
 #!/bin/bash
 
 # ==================================================
-#           SISTEM PERIZINAN SCRIPT
+# BAGIAN 1: PEMBERSIHAN TOTAL BOT LAMA
 # ==================================================
+echo "=================================================="
+echo "      MEMBERSIHKAN INSTALASI BOT LAMA..."
+echo "=================================================="
+sleep 2
+
+# Hentikan dan nonaktifkan layanan systemd
+echo "--> Menghentikan & menonaktifkan layanan kyt..."
+sudo systemctl stop kyt &> /dev/null
+sudo systemctl disable kyt &> /dev/null
+
+# Hapus file layanan
+echo "--> Menghapus file layanan systemd..."
+sudo rm -f /etc/systemd/system/kyt.service
+sudo systemctl daemon-reload
+
+# Hapus file-file skrip, konfigurasi, dan menu
+echo "--> Menghapus direktori dan file-file bot..."
+sudo rm -rf /usr/bin/kyt
+sudo rm -f /usr/bin/menu-bot
+sudo rm -f /usr/bin/*.session
+
+echo ""
+echo "Pembersihan instalasi lama SELESAI."
+echo "=================================================="
+echo ""
+sleep 3
+clear
+
+# ==================================================
+# BAGIAN 2: INSTALASI BOT BARU
+# ==================================================
+echo "=================================================="
+echo "        MEMULAI INSTALASI BOT BARU..."
+echo "=================================================="
+sleep 2
+
+# Skrip instalasi lengkap (versi terbaru) dimulai di sini
+# --- Perizinan ---
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -13,61 +51,44 @@ data_ip="https://github.com/hokagelegend9999/ijin/raw/refs/heads/main/genom-pro"
 IZIN=$(curl -sS "$data_ip")
 
 echo "Mengecek Izin Akses Script..."
-sleep 2
+sleep 1
 if echo "$IZIN" | grep -q -w "$MYIP"; then
-    echo -e "${GREEN}TERIMAKASIH TELAH MENGGUNAKAN SCRIPT ALPHA V2 PRO${NC}"
+    echo -e "${GREEN}Akses Diterima. Melanjutkan instalasi...${NC}"
     sleep 2
     clear
 else
-    echo -e "${RED}maaf hanya untuk pengguna SCRIPT ALPHA PRO${NC}"
-    echo "IP VPS Anda: $MYIP tidak terdaftar."
+    echo -e "${RED}Akses Ditolak. IP VPS Anda ($MYIP) tidak terdaftar.${NC}"
     exit 1
 fi
 
-# ==================================================
-#             PROSES INSTALASI
-# ==================================================
-
-# --- Cek dan Buat File Konfigurasi Jika Tidak Ada ---
-mkdir -p /etc/xray
-mkdir -p /etc/slowdns
-files_to_check=("/etc/xray/dns" "/etc/slowdns/server.pub" "/etc/xray/domain")
-for file_path in "${files_to_check[@]}"; do
-    [ ! -f "$file_path" ] && touch "$file_path"
-done
-
+# --- Instalasi ---
+mkdir -p /etc/xray /etc/slowdns
+touch /etc/xray/dns /etc/slowdns/server.pub /etc/xray/domain
 NS=$(cat /etc/xray/dns)
 PUB=$(cat /etc/slowdns/server.pub)
 domain=$(cat /etc/xray/domain)
-grenbo="\e[92;1m"
 
-echo "Memulai instalasi paket yang dibutuhkan..."
+echo "Menginstal paket yang dibutuhkan..."
 apt-get update -y > /dev/null 2>&1
 apt-get install -y python3 python3-pip git unzip wget > /dev/null 2>&1
-echo "Instalasi paket selesai."
 
 echo "Mengunduh dan menyiapkan file bot..."
 cd /usr/bin || exit
-rm -rf bot.zip kyt.zip bot kyt
-wget -q https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/bot.zip
-unzip -o bot.zip > /dev/null 2>&1
+wget -q -O bot.zip https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/bot.zip && unzip -o bot.zip && rm -f bot.zip
+wget -q -O kyt.zip https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/kyt.zip && unzip -o kyt.zip && rm -f kyt.zip
 mv bot/* /usr/bin/
 chmod +x /usr/bin/*
-rm -rf bot.zip bot
-wget -q https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/kyt.zip
-unzip -o kyt.zip > /dev/null 2>&1
 pip3 install -r kyt/requirements.txt > /dev/null 2>&1
-echo "Penyiapan file bot selesai."
+rm -rf bot
 clear
 
 # --- Input Konfigurasi Bot ---
+echo -e "\e[1;97;101m         KONFIGURASI BOT TELEGRAM         \e[0m"
 echo ""
-echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e " \e[1;97;101m          ADD BOT PANEL          \e[0m"
-echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-read -e -p "[*] Input your Bot Token : " bottoken
-read -e -p "[*] Input Your Id Telegram : " admin
+read -e -p "[*] Masukkan Bot Token Anda: " bottoken
+read -e -p "[*] Masukkan ID Admin Telegram Anda: " admin
 
+mkdir -p /usr/bin/kyt
 rm -f /usr/bin/kyt/var.txt
 echo -e BOT_TOKEN='"'$bottoken'"' >> /usr/bin/kyt/var.txt
 echo -e ADMIN='"'$admin'"' >> /usr/bin/kyt/var.txt
@@ -76,7 +97,7 @@ echo -e PUB='"'$PUB'"' >> /usr/bin/kyt/var.txt
 echo -e HOST='"'$NS'"' >> /usr/bin/kyt/var.txt
 clear
 
-echo "Membuat dan mengaktifkan layanan bot..."
+echo "Membuat layanan systemd untuk bot..."
 cat > /etc/systemd/system/kyt.service << END
 [Unit]
 Description=Simple kyt - @kyt
@@ -88,106 +109,57 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 END
+
 systemctl daemon-reload
 systemctl enable kyt > /dev/null 2>&1
 systemctl restart kyt
 
-# ==================================================
-#    MEMBUAT SKRIP MENU MANAJEMEN DENGAN INFO EXPIRED
-# ==================================================
-cat > /usr/bin/menu-bot << 'EOF'
+# --- Membuat Skrip Menu Manajemen ---
+cat > /usr/local/sbin/menu-bot << 'EOF'
 #!/bin/bash
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-NC='\033[0m'
-
-check_status() {
-    if systemctl is-active --quiet kyt; then
-        echo -e "${GREEN}AKTIF${NC}"
-    else
-        echo -e "${RED}TIDAK AKTIF${NC}"
-    fi
-}
-
-update_script() {
-    echo "Mengunduh update script bot..."
-    cd /usr/bin || exit
-    wget -q -O bot_update.zip https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/bot.zip && unzip -o bot_update.zip && rm -f bot_update.zip
-    wget -q -O kyt_update.zip https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/kyt.zip && unzip -o kyt_update.zip && rm -f kyt_update.zip
-    pip3 install -r kyt/requirements.txt > /dev/null 2>&1
-    echo "Update selesai. Merestart bot..."
-    systemctl restart kyt
-    sleep 2
-}
-
-edit_config() {
-    echo "Konfigurasi saat ini:"
-    source /usr/bin/kyt/var.txt
-    echo "Token: $BOT_TOKEN"
-    echo "Admin: $ADMIN"
-    echo ""
-    read -e -p "Masukkan Bot Token baru (kosongkan jika tidak ingin ganti): " new_bottoken
-    read -e -p "Masukkan ID Telegram Admin baru (kosongkan jika tidak ingin ganti): " new_admin
-    if [ -n "$new_bottoken" ]; then sed -i "s/BOT_TOKEN=\".*\"/BOT_TOKEN=\"$new_bottoken\"/" /usr/bin/kyt/var.txt; fi
-    if [ -n "$new_admin" ]; then sed -i "s/ADMIN=\".*\"/ADMIN=\"$new_admin\"/" /usr/bin/kyt/var.txt; fi
-    echo "Konfigurasi diperbarui. Merestart bot..."
-    systemctl restart kyt
-    sleep 2
-}
-
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; NC='\033[0m'
+check_status(){ if systemctl is-active --quiet kyt; then echo -e "${GREEN}AKTIF${NC}"; else echo -e "${RED}TIDAK AKTIF${NC}"; fi }
 while true; do
     clear
-    # --- LOGIKA UNTUK MENGAMBIL TANGGAL EXPIRED ---
     MYIP=$(curl -sS icanhazip.com)
     data_ip="https://github.com/hokagelegend9999/ijin/raw/refs/heads/main/genom-pro"
-    IZIN=$(curl -sL "$data_ip")
-    # Cari baris IP, lalu ambil kolom kedua (tanggal)
+    IZIN=$(curl -sS "$data_ip")
     exp_date=$(echo "$IZIN" | grep -w "$MYIP" | awk '{print $2}')
-    if [ -z "$exp_date" ]; then
-        exp_date="Tidak Terdaftar"
-    fi
-    # --- AKHIR DARI LOGIKA ---
-
+    [ -z "$exp_date" ] && exp_date="Tidak Terdaftar"
     source /usr/bin/kyt/var.txt
     echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo -e " \e[1;97;101m         KELOLA BOT TELEGRAM         \e[0m"
     echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -e "IP VPS     : $MYIP"
     echo -e "Status Bot : $(check_status)"
     echo -e "Expired    : ${YELLOW}$exp_date${NC}"
     echo -e "Token      : ${BOT_TOKEN}"
     echo -e "Admin ID   : ${ADMIN}"
     echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e " [1] Cek Log Bot"
-    echo -e " [2] Restart Bot"
-    echo -e " [3] Edit Token / ID Admin"
-    echo -e " [4] Update Script Bot"
+    echo -e " [1] Cek Log Bot   [2] Restart Bot"
+    echo -e " [3] Edit Config   [4] Update Script"
     echo -e " [x] Keluar"
     echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     read -p "Pilih opsi: " opt
-
     case $opt in
-        1) journalctl -u kyt -f --no-pager ;;
-        2) systemctl restart kyt; echo "Bot direstart."; sleep 1 ;;
-        3) edit_config ;;
-        4) update_script ;;
-        x|X) exit 0 ;;
-        *) echo -e "${RED}Opsi tidak valid!${NC}"; sleep 1 ;;
+        1) journalctl -u kyt -f --no-pager;;
+        2) sudo systemctl restart kyt; echo "Bot direstart."; sleep 1;;
+        3) nano /usr/bin/kyt/var.txt; sudo systemctl restart kyt; echo "Config diubah & bot direstart."; sleep 1;;
+        4) cd /usr/bin; wget -q -O u.zip https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/kyt.zip && unzip -o u.zip && rm -f u.zip; sudo systemctl restart kyt; echo "Script diupdate & bot direstart."; sleep 1;;
+        x|X) exit 0;;
+        *) echo -e "${RED}Opsi tidak valid!${NC}"; sleep 1;;
     esac
 done
 EOF
-
-chmod +x /usr/local/bin/menu-bot
+chmod +x /usr/local/sbin/menu-bot
 
 # --- PESAN TERAKHIR ---
 clear
 echo -e "${GREEN}===============================================${NC}"
-echo -e "         INSTALASI BOT SELESAI"
+echo -e "        INSTALASI BERSIH BOT SELESAI"
 echo -e "${GREEN}===============================================${NC}"
-echo -e "Bot Telegram Anda sekarang sudah aktif."
-echo -e "Untuk mengelola bot di kemudian hari, Anda tidak"
-echo -e "perlu menjalankan installer ini lagi."
 echo ""
-echo -e "Cukup ketik perintah di bawah ini di terminal:"
+echo -e "Bot Telegram Anda sekarang sudah aktif."
+echo -e "Untuk mengelola bot, ketik perintah di bawah ini:"
 echo -e "${YELLOW}menu-bot${NC}"
 echo ""

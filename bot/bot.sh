@@ -16,7 +16,7 @@ MYIP=$(curl -sS icanhazip.com)
 data_ip="https://github.com/hokagelegend9999/ijin/raw/refs/heads/main/genom-pro"
 
 # Ambil konten dari file izin
-IZIN=$(curl -sS "$data_ip")
+IZIN=$(curl -sL "$data_ip")
 
 # Tampilkan pesan pengecekan
 echo "Mengecek Izin Akses Script..."
@@ -39,15 +39,36 @@ fi
 #       AKHIR DARI SISTEM PERIZINAN
 # ==================================================
 
-# --- Cek file dependensi utama ---
-if [ ! -f /etc/xray/dns ] || [ ! -f /etc/slowdns/server.pub ] || [ ! -f /etc/xray/domain ]; then
-    echo -e "${RED}ERROR: File konfigurasi penting tidak ditemukan!${NC}"
-    echo "Pastikan Xray/SlowDNS sudah terinstal dan file berikut ada:"
-    echo "- /etc/xray/dns"
-    echo "- /etc/slowdns/server.pub"
-    echo "- /etc/xray/domain"
-    exit 1
+# --- Cek dan Buat File Konfigurasi Jika Tidak Ada ---
+mkdir -p /etc/xray
+mkdir -p /etc/slowdns
+
+files_to_check=(
+    "/etc/xray/dns"
+    "/etc/slowdns/server.pub"
+    "/etc/xray/domain"
+)
+warning_message=""
+
+for file_path in "${files_to_check[@]}"; do
+    if [ ! -f "$file_path" ]; then
+        echo -e "${YELLOW}PERINGATAN: File '$file_path' tidak ditemukan. Membuat file kosong.${NC}"
+        touch "$file_path"
+        warning_message="${warning_message}\n- $file_path (kosong, perlu diisi manual)"
+    fi
+done
+
+if [ ! -z "$warning_message" ]; then
+    echo -e "\n${RED}================ PERHATIAN PENTING =================${NC}"
+    echo -e "${YELLOW}Beberapa file konfigurasi penting tidak ada dan telah dibuat kosong."
+    echo -e "Anda HARUS mengedit file berikut secara manual dan mengisinya"
+    echo -e "dengan informasi yang benar agar bot berfungsi:${NC}"
+    echo -e "${YELLOW}$warning_message${NC}"
+    echo -e "${RED}=====================================================${NC}"
+    read -n 1 -s -r -p "Tekan tombol apa saja untuk melanjutkan instalasi..."
+    echo
 fi
+
 
 NS=$(cat /etc/xray/dns)
 PUB=$(cat /etc/slowdns/server.pub)

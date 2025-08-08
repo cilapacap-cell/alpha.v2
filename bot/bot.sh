@@ -6,6 +6,7 @@
 # Definisikan variabel yang dibutuhkan
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
 # Dapatkan IP publik dari VPS yang menjalankan skrip
@@ -45,20 +46,20 @@ PUB=$( cat /etc/slowdns/server.pub )
 domain=$(cat /etc/xray/domain)
 #color
 grenbo="\e[92;1m"
-NC='\e[0m'
+
 #install
 apt update && apt upgrade
 apt install python3 python3-pip git -y
 cd /usr/bin
-wget https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/bot.zip
-unzip bot.zip
+wget -q https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/bot.zip
+unzip -o bot.zip
 mv bot/* /usr/bin
 chmod +x /usr/bin/*
 rm -rf bot.zip
 clear
-wget https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/kyt.zip
-unzip kyt.zip
-pip3 install -r kyt/requirements.txt
+wget -q https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/kyt.zip
+unzip -o kyt.zip
+pip3 install -r kyt/requirements.txt > /dev/null 2>&1
 
 clear
 echo ""
@@ -71,6 +72,11 @@ echo -e "${grenbo}[*] Info Id Telegram : @MissRose_bot , perintah /info${NC}"
 echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
 read -e -p "[*] Input your Bot Token : " bottoken
 read -e -p "[*] Input Your Id Telegram : " admin
+
+# Hapus file var.txt lama jika ada untuk menghindari duplikasi
+rm -f /usr/bin/kyt/var.txt
+
+# Buat file var.txt baru
 echo -e BOT_TOKEN='"'$bottoken'"' >> /usr/bin/kyt/var.txt
 echo -e ADMIN='"'$admin'"' >> /usr/bin/kyt/var.txt
 echo -e DOMAIN='"'$domain'"' >> /usr/bin/kyt/var.txt
@@ -92,22 +98,71 @@ Restart=always
 WantedBy=multi-user.target
 END
 
+systemctl daemon-reload
 systemctl start kyt
 systemctl enable kyt
 systemctl restart kyt
 cd /root
 rm -f kyt.sh
-echo "Done"
-echo "Your Data Bot"
-echo -e "==============================="
-echo "Token Bot         : $bottoken"
-echo "Admin          : $admin"
-echo "Domain        : $domain"
-echo "Pub            : $PUB"
-echo "Host           : $NS"
-echo -e "==============================="
-echo "Setting done"
-sleep 2
-clear
 
-echo " Installations complete, type /menu on your bot"
+# ==================================================
+#           MENU MANAJEMEN BOT
+# ==================================================
+
+# Fungsi untuk memeriksa status bot
+check_status() {
+    if systemctl is-active --quiet kyt; then
+        echo -e "${GREEN}AKTIF${NC}"
+    else
+        echo -e "${RED}TIDAK AKTIF${NC}"
+    fi
+}
+
+# Loop menu utama
+while true; do
+    clear
+    echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -e " \e[1;97;101m          KELOLA BOT TELEGRAM          \e[0m"
+    echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -e "Status Bot: $(check_status)"
+    echo ""
+    echo -e "Data Bot Anda:"
+    echo -e "  - Token Bot: $bottoken"
+    echo -e "  - Admin ID : $admin"
+    echo -e "  - Domain   : $domain"
+    echo ""
+    echo -e "Ketik /menu di bot Telegram Anda untuk memulai."
+    echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -e " [1] Cek Log Bot"
+    echo -e " [2] Restart Bot"
+    echo -e " [x] Keluar"
+    echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    read -p "Pilih opsi [1-2 atau x]: " opt
+
+    case $opt in
+        1)
+            echo ""
+            echo "Menampilkan log bot... Tekan CTRL+C untuk kembali ke menu."
+            sleep 2
+            journalctl -u kyt -f --no-pager
+            read -n 1 -s -r -p "Tekan tombol apa saja untuk kembali ke menu..."
+            ;;
+        2)
+            echo ""
+            echo "Merestart bot..."
+            systemctl restart kyt
+            sleep 2
+            echo "Bot telah direstart."
+            sleep 1
+            ;;
+        x)
+            clear
+            echo "Terima kasih telah menggunakan skrip ini."
+            break
+            ;;
+        *)
+            echo -e "${RED}Opsi tidak valid!${NC}"
+            sleep 1
+            ;;
+    esac
+done

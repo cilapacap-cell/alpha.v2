@@ -1,208 +1,72 @@
 #!/bin/bash
+NS=$( cat /etc/xray/dns )
+PUB=$( cat /etc/slowdns/server.pub )
+domain=$(cat /etc/xray/domain)
+#color
+grenbo="\e[92;1m"
+NC='\e[0m'
+#install
+apt update && apt upgrade
+apt install python3 python3-pip git
+cd /usr/bin
+wget https://raw.githubusercontent.com/hokagelegend9999/alpha_vz/refs/heads/main/bot/bot.zip
+unzip bot.zip
+mv bot/* /usr/bin
+chmod +x /usr/bin/*
+rm -rf bot.zip
+clear
+wget https://github.com/hokagelegend9999/alpha_vz/raw/refs/heads/main/bot/kyt.zip
+unzip kyt.zip
+pip3 install -r kyt/requirements.txt
 
-# =============================================
-#           [ Konfigurasi Awal ]
-# =============================================
-# Hentikan skrip jika ada error
-# set -e
-
-# Kosongkan layar
+clear
+echo ""
+echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+echo -e " \e[1;97;101m          ADD BOT PANEL          \e[0m"
+echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+echo -e "${grenbo}Tutorial Creat Bot and ID Telegram${NC}"
+echo -e "${grenbo}[*] Creat Bot and Token Bot : @BotFather${NC}"
+echo -e "${grenbo}[*] Info Id Telegram : @MissRose_bot , perintah /info${NC}"
+echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+read -e -p "[*] Input your Bot Token : " bottoken
+read -e -p "[*] Input Your Id Telegram : " admin
+echo -e BOT_TOKEN='"'$bottoken'"' >> /usr/bin/kyt/var.txt
+echo -e ADMIN='"'$admin'"' >> /usr/bin/kyt/var.txt
+echo -e DOMAIN='"'$domain'"' >> /usr/bin/kyt/var.txt
+echo -e PUB='"'$PUB'"' >> /usr/bin/kyt/var.txt
+echo -e HOST='"'$NS'"' >> /usr/bin/kyt/var.txt
 clear
 
-# =============================================
-#           [ Konfigurasi Warna ]
-# =============================================
-export RED='\033[0;31m'
-export GREEN='\033[0;32m'
-export YELLOW='\033[0;33m'
-export BLUE='\033[0;34m'
-export CYAN='\033[0;36m'
-export NC='\033[0m'
-export ORANGE='\033[0;91m'
-export WH='\033[1;37m'
+cat > /etc/systemd/system/kyt.service << END
+[Unit]
+Description=Simple kyt - @kyt
+After=network.target
 
-# =============================================
-#           [ Fungsi Pengecekan Lisensi ]
-# =============================================
-check_ip_and_get_info() {
-    local ip_to_check=$1
-    # Variabel permission_file harus sudah ada secara global
-    while IFS= read -r line; do
-        # Hapus karakter aneh dan spasi berlebih
-        line=$(echo "$line" | tr -d '\r' | sed 's/[^[:print:]]//g' | xargs)
-        
-        #lewati baris kosong
-        [ -z "$line" ] && continue
+[Service]
+WorkingDirectory=/usr/bin
+ExecStart=/usr/bin/python3 -m kyt
+Restart=always
 
-        # Split baris menjadi array
-        read -ra fields <<< "$line"
+[Install]
+WantedBy=multi-user.target
+END
 
-        # Cek jika kolom ke-4 (index 3) adalah IP yang dicari
-        if [[ "${fields[3]}" == "$ip_to_check" ]]; then
-            client_name="${fields[1]}"  # Kolom 2
-            exp_date="${fields[2]}"     # Kolom 3
-            return 0 # Sukses, IP ditemukan
-        fi
-    done <<< "$permission_file"
-    
-    return 1 # Gagal, IP tidak ditemukan
-}
+systemctl start kyt 
+systemctl enable kyt
+systemctl restart kyt
+cd /root
+rm -rf kyt.sh
+echo "Done"
+echo "Your Data Bot"
+echo -e "==============================="
+echo "Token Bot         : $bottoken"
+echo "Admin          : $admin"
+echo "Domain        : $domain"
+echo "Pub            : $PUB"
+echo "Host           : $NS"
+echo -e "==============================="
+echo "Setting done"
+sleep 2
+clear
 
-# =============================================
-#           [ Proses Utama ]
-# =============================================
-
-# Ambil data lisensi dari GitHub dengan timeout
-echo -e "${GREEN}⌛ Mengambil data lisensi...${NC}"
-permission_file=$(curl -sL --connect-timeout 10 https://github.com/hokagelegend9999/ijin/raw/refs/heads/main/genom-pro)
-
-# Validasi file permission
-if [ -z "$permission_file" ]; then
-echo -e "${PURPLE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${RED}🛑  ${YELLOW}AKSES DITOLAK!${NC} ${RED}Script Bot Telegram ini hanya untuk${NC} ${CYAN}🔐 PEMILIK & PEMBELI RESMI ALPHA Pro${NC}"
-echo -e "${BLUE}💡  Ingin menikmati fitur lengkap seperti${NC} ${GREEN}🧠 Auto-response${NC}, ${GREEN}⚙️ Multi-tools${NC}, dan ${GREEN}📊 Statistik pintar${NC}?"
-echo -e "${YELLOW}🚀  Segera aktifkan Genom Pro sekarang dan buka semua fitur premium-nya!${NC}"
-echo -e "${PURPLE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-
-    exit 1
-fi
-
-# Ambil IP VPS
-IP_VPS=$(curl -sL --connect-timeout 5 ipv4.icanhazip.com)
-
-# Lakukan pengecekan lisensi
-echo -e "${GREEN}⌛ Memeriksa lisensi untuk IP: $IP_VPS...${NC}"
-if check_ip_and_get_info "$IP_VPS"; then
-    # Validasi format tanggal
-    if ! [[ "$exp_date" =~ ^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$ ]]; then
-        echo -e "${RED}❌ Format tanggal di file lisensi salah: '$exp_date' (seharusnya YYYY-MM-DD)${NC}"
-        exit 1
-    fi
-
-    # Hitung sisa masa aktif
-    current_epoch=$(date +%s)
-    exp_epoch=$(date -d "$exp_date" +%s)
-
-    if (( exp_epoch < current_epoch )); then
-        echo -e "${RED}❌ Lisensi Anda telah habis pada tanggal $exp_date!${NC}"
-        exit 1
-    fi
-    days_remaining=$(( (exp_epoch - current_epoch) / 86400 ))
-    echo -e "${GREEN}✅ Lisensi valid. Sisa masa aktif: $days_remaining hari.${NC}"
-    sleep 2
-else
-    echo -e "${RED}❌ IP tidak terdaftar!${NC}"
-    echo -e "➥ Hubungi admin ${CYAN}「 ✦ @HokageLegend ✦ 」${NC}"
-    exit 1
-fi
-
-# =============================================
-#           [ Fungsi Tampilan Menu ]
-# =============================================
-show_main_menu() {
-    clear
-    # --- PENGUMPULAN DATA SISTEM ---
-    MODEL2=$(cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/[=PRETTY_NAME"]//g')
-    LOADCPU=$(printf '%-0.1f' "$(top -bn1 | awk '/Cpu/ { print 100 - $8 }')")
-    CORE=$(nproc)
-    tram=$(free -h | awk '/Mem:/ {print $2}')
-    uram=$(free -h | awk '/Mem:/ {print $3}')
-    ISP=$(curl -sL ipinfo.io/org | cut -d ' ' -f 2-10)
-    CITY=$(curl -sL ipinfo.io/city)
-    SERONLINE=$(uptime -p | cut -d " " -f 2-)
-
-    # --- STATUS SERVICE ---
-    # Xray
-    if systemctl is-active --quiet xray; then status_xray="${GREEN}ON${NC}"; else status_xray="${RED}OFF${NC}"; fi
-    # Nginx
-    if systemctl is-active --quiet nginx; then status_nginx="${GREEN}ON${NC}"; else status_nginx="${RED}OFF${NC}"; fi
-    # Dropbear
-    if /etc/init.d/dropbear status >/dev/null 2>&1; then status_beruangjatuh="${GREEN}ON${NC}"; else status_beruangjatuh="${RED}OFF${NC}"; fi
-    # SSH WS
-    if systemctl is-active --quiet status ws; then status_ws="${GREEN}ON${NC}"; else status_ws="${RED}OFF${NC}"; fi
-    # Bot Telegram
-    if systemctl is-active --quiet kyt.service; then status_kyt="${GREEN}ON${NC}"; else status_kyt="${RED}OFF${NC}"; fi
-
-    # --- TAMPILAN PANEL & MENU ---
-    echo -e "$GREEN╭═══════════════════════════════════════════════════╮${NC}"
-    echo -e "$GREEN│${NC} ${WH}        • SCIPT ALPHA BOT TELEGRAM PRO •         ${NC} $GREEN│${NC}"
-    echo -e "$GREEN╰═══════════════════════════════════════════════════╯${NC}"
-    echo -e "$GREEN╭═══════════════════════════════════════════════════╮${NC}"
-    echo -e "$GREEN│ ${WH}Client Name    : ${GREEN}$client_name${NC}"
-    echo -e "$GREEN│ ${WH}Days Remaining : ${GREEN}$days_remaining hari${NC}"
-    echo -e "$GREEN├───────────────────────────────────────────────────┤${NC}"
-    echo -e "$GREEN│ ${WH}System OS      : ${CYAN}$MODEL2${NC}"
-    echo -e "$GREEN│ ${WH}Memory Usage   : ${CYAN}$uram / $tram${NC}"
-    echo -e "$GREEN│ ${WH}CPU Usage      : ${CYAN}$LOADCPU% (${CORE} Core)${NC}"
-    echo -e "$GREEN│ ${WH}ISP / City     : ${CYAN}$ISP / $CITY${NC}"
-    echo -e "$GREEN│ ${WH}Domain         : ${CYAN}$(cat /etc/xray/domain 2>/dev/null || echo "Not Set")${NC}"
-    echo -e "$GREEN│ ${WH}IP-VPS         : ${CYAN}$IP_VPS${NC}"
-    echo -e "$GREEN│ ${WH}Uptime         : ${CYAN}$SERONLINE${NC}"
-    echo -e "$GREEN╰═══════════════════════════════════════════════════╯${NC}"
-    
-    # --- PANEL STATUS SERVER GAYA BARU ---
-    echo -e "$BLUE╔════════════════════════════════════════════════════╗${NC}"
-    echo -e "$BLUE║${CYAN}     🚀   S T A T U S   S E R V E R   🚀            ${BLUE}║${NC}"
-    echo -e "$BLUE╠════════════════════════════════════════════════════╣${NC}"
-    echo -e "$BLUE║${WH}🌐WS:$status_ws |${WH}⚡XRAY:$status_xray | ${WH}🖥️ NGINX:$status_nginx |${WH}🔒DB:$status_beruangjatuh | ${WH}🤖BOT:$status_kyt${BLUE} ║${NC}"
-    echo -e "$BLUE╚════════════════════════════════════════════════════╝${NC}"
-
-    # --- MENU UTAMA BARU ---
-    echo -e "$GREEN╭═══════════════════════════════════════════════════╮${NC}"
-    echo -e "$GREEN│                   ${WH}MENU UTAMA${NC}                      ${GREEN}│${NC}"
-    echo -e "$GREEN├───────────────────────────────────────────────────┤${NC}"
-    echo -e "$GREEN│ ${WH}[1] Install Bot SSH & XRAY   ${WH}[4] Setting          ${GREEN}│${NC}"
-    echo -e "$GREEN│ ${WH}[2] Cek Status Bot           ${WH}[5] Info VPS         ${GREEN}│${NC}"
-    echo -e "$GREEN│ ${WH}[3] Restart Layanan Bot      ${WH}[0] Exit             ${GREEN}│${NC}"
-    echo -e "$GREEN╰═══════════════════════════════════════════════════╯${NC}"
-    echo -ne "  ${WH}Masukkan pilihan Anda [0-5]: ${NC}"
-}
-
-# =============================================
-#           [ Loop Menu Utama ]
-# =============================================
-while true; do
-    show_main_menu
-    read -r choice
-    
-    case $choice in
-        1)
-            echo -e "\n${YELLOW}Mempersiapkan instalasi Bot Telegram...${NC}"
-            cd /root
-            rm -f bot.sh
-            wget -q https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/bot.sh && chmod +x bot.sh && ./bot.sh
-            read -n 1 -s -r -p "Instalasi selesai. Tekan tombol apa saja untuk kembali..."
-            ;;
-        2)
-            echo -e "\n${YELLOW}Mengecek status Bot Telegram...${NC}"
-            systemctl status kyt
-            read -n 1 -s -r -p "Tekan tombol apa saja untuk kembali..."
-            ;;
-        3)
-            echo -e "\n${YELLOW}Me-restart layanan Bot Telegram...${NC}"
-            systemctl restart kyt
-            echo -e "${GREEN}Layanan Bot Telegram berhasil di-restart.${NC}"
-            sleep 1
-            read -n 1 -s -r -p "Tekan tombol apa saja untuk kembali..."
-            ;;
-        4)
-            echo -e "\n${CYAN}Menu 'Setting' belum diimplementasikan.${NC}"
-            sleep 1
-            read -n 1 -s -r -p "Tekan tombol apa saja untuk kembali..."
-            ;;
-        5)
-            echo -e "\n${CYAN}Menu 'Info VPS' belum diimplementasikan.${NC}"
-            echo -e "${WH}Panel informasi sudah ditampilkan di atas.${NC}"
-            sleep 1
-            read -n 1 -s -r -p "Tekan tombol apa saja untuk kembali..."
-            ;;
-        0)
-            echo -e "\n${RED}Keluar dari skrip...${NC}"
-            exit 0
-            ;;
-        *)
-            echo -e "\n${RED}Pilihan tidak valid! Silakan coba lagi.${NC}"
-            sleep 1
-            ;;
-    esac
-done
+echo " Installations complete, type /menu on your bot"

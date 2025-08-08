@@ -10,7 +10,7 @@ NC='\033[0m'
 
 MYIP=$(curl -sS icanhazip.com)
 data_ip="https://github.com/hokagelegend9999/ijin/raw/refs/heads/main/genom-pro"
-IZIN=$(curl -sL "$data_ip")
+IZIN=$(curl -sS "$data_ip")
 
 echo "Mengecek Izin Akses Script..."
 sleep 2
@@ -32,22 +32,9 @@ fi
 mkdir -p /etc/xray
 mkdir -p /etc/slowdns
 files_to_check=("/etc/xray/dns" "/etc/slowdns/server.pub" "/etc/xray/domain")
-warning_message=""
 for file_path in "${files_to_check[@]}"; do
-    if [ ! -f "$file_path" ]; then
-        touch "$file_path"
-        warning_message="${warning_message}\n- $file_path (kosong, perlu diisi manual)"
-    fi
+    [ ! -f "$file_path" ] && touch "$file_path"
 done
-if [ ! -z "$warning_message" ]; then
-    echo -e "\n${RED}================ PERHATIAN PENTING =================${NC}"
-    echo -e "${YELLOW}Beberapa file konfigurasi penting tidak ada dan telah dibuat kosong."
-    echo -e "Anda HARUS mengedit file-file ini secara manual agar bot berfungsi:${NC}"
-    echo -e "${YELLOW}$warning_message${NC}"
-    echo -e "${RED}=====================================================${NC}"
-    read -n 1 -s -r -p "Tekan tombol apa saja untuk melanjutkan instalasi..."
-    echo
-fi
 
 NS=$(cat /etc/xray/dns)
 PUB=$(cat /etc/slowdns/server.pub)
@@ -106,9 +93,9 @@ systemctl enable kyt > /dev/null 2>&1
 systemctl restart kyt
 
 # ==================================================
-#    MEMBUAT SKRIP MENU MANAJEMEN
+#    MEMBUAT SKRIP MENU MANAJEMEN DENGAN INFO EXPIRED
 # ==================================================
-cat > /usr/local/bin/menu-bot << 'EOF'
+cat > /usr/bin/menu-bot << 'EOF'
 #!/bin/bash
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -123,6 +110,17 @@ check_status() {
     fi
 }
 
+update_script() {
+    echo "Mengunduh update script bot..."
+    cd /usr/bin || exit
+    wget -q -O bot_update.zip https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/bot.zip && unzip -o bot_update.zip && rm -f bot_update.zip
+    wget -q -O kyt_update.zip https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/kyt.zip && unzip -o kyt_update.zip && rm -f kyt_update.zip
+    pip3 install -r kyt/requirements.txt > /dev/null 2>&1
+    echo "Update selesai. Merestart bot..."
+    systemctl restart kyt
+    sleep 2
+}
+
 edit_config() {
     echo "Konfigurasi saat ini:"
     source /usr/bin/kyt/var.txt
@@ -131,15 +129,8 @@ edit_config() {
     echo ""
     read -e -p "Masukkan Bot Token baru (kosongkan jika tidak ingin ganti): " new_bottoken
     read -e -p "Masukkan ID Telegram Admin baru (kosongkan jika tidak ingin ganti): " new_admin
-
-    if [ -n "$new_bottoken" ]; then
-        sed -i "s/BOT_TOKEN=\".*\"/BOT_TOKEN=\"$new_bottoken\"/" /usr/bin/kyt/var.txt
-    fi
-
-    if [ -n "$new_admin" ]; then
-        sed -i "s/ADMIN=\".*\"/ADMIN=\"$new_admin\"/" /usr/bin/kyt/var.txt
-    fi
-
+    if [ -n "$new_bottoken" ]; then sed -i "s/BOT_TOKEN=\".*\"/BOT_TOKEN=\"$new_bottoken\"/" /usr/bin/kyt/var.txt; fi
+    if [ -n "$new_admin" ]; then sed -i "s/ADMIN=\".*\"/ADMIN=\"$new_admin\"/" /usr/bin/kyt/var.txt; fi
     echo "Konfigurasi diperbarui. Merestart bot..."
     systemctl restart kyt
     sleep 2
@@ -147,45 +138,46 @@ edit_config() {
 
 while true; do
     clear
+    # --- LOGIKA UNTUK MENGAMBIL TANGGAL EXPIRED ---
+    MYIP=$(curl -sS icanhazip.com)
+    data_ip="https://github.com/hokagelegend9999/ijin/raw/refs/heads/main/genom-pro"
+    IZIN=$(curl -sS "$data_ip")
+    # Cari baris IP, lalu ambil kolom kedua (tanggal)
+    exp_date=$(echo "$IZIN" | grep -w "$MYIP" | awk '{print $2}')
+    if [ -z "$exp_date" ]; then
+        exp_date="Tidak Terdaftar"
+    fi
+    # --- AKHIR DARI LOGIKA ---
+
     source /usr/bin/kyt/var.txt
     echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e " \e[1;97;101m          KELOLA BOT TELEGRAM          \e[0m"
+    echo -e " \e[1;97;101m         KELOLA BOT TELEGRAM         \e[0m"
     echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "Status Bot: $(check_status)"
+    echo -e "Status Bot : $(check_status)"
+    echo -e "Expired    : ${YELLOW}$exp_date${NC}"
     echo -e "Token      : ${BOT_TOKEN}"
     echo -e "Admin ID   : ${ADMIN}"
     echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo -e " [1] Cek Log Bot"
     echo -e " [2] Restart Bot"
     echo -e " [3] Edit Token / ID Admin"
+    echo -e " [4] Update Script Bot"
     echo -e " [x] Keluar"
     echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     read -p "Pilih opsi: " opt
 
     case $opt in
-        1)
-            journalctl -u kyt -f --no-pager
-            ;;
-        2)
-            systemctl restart kyt
-            echo "Bot direstart."
-            sleep 1
-            ;;
-        3)
-            edit_config
-            ;;
-        x|X)
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}Opsi tidak valid!${NC}"
-            sleep 1
-            ;;
+        1) journalctl -u kyt -f --no-pager ;;
+        2) systemctl restart kyt; echo "Bot direstart."; sleep 1 ;;
+        3) edit_config ;;
+        4) update_script ;;
+        x|X) exit 0 ;;
+        *) echo -e "${RED}Opsi tidak valid!${NC}"; sleep 1 ;;
     esac
 done
 EOF
 
-chmod +x /usr/local/sbin/menu-bot
+chmod +x /usr/bin/menu-bot
 
 # --- PESAN TERAKHIR ---
 clear

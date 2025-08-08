@@ -35,9 +35,9 @@ sleep 2
 
 # --- Perizinan ---
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; NC='\033[0m'
-MYIP=$(curl -sS icanhazip.com)
+MYIP=$(curl -sL icanhazip.com)
 data_ip="https://github.com/hokagelegend9999/ijin/raw/refs/heads/main/genom-pro"
-IZIN=$(curl -sS "$data_ip")
+IZIN=$(curl -sL "$data_ip")
 
 echo "Mengecek Izin Akses Script..."
 sleep 1

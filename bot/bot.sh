@@ -169,7 +169,7 @@ while true; do
         1)
             echo -e "\n${YELLOW}Mempersiapkan instalasi Bot Telegram...${NC}"
             cd /root
-            rm -f install-boot
+            rm -f bot.sh
             wget -q https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/bot.sh && chmod +x bot.sh && ./bot.sh
             read -n 1 -s -r -p "Instalasi selesai. Tekan tombol apa saja untuk kembali..."
             ;;

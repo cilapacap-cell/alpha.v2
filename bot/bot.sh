@@ -141,7 +141,7 @@ while true; do
     # --- LOGIKA UNTUK MENGAMBIL TANGGAL EXPIRED ---
     MYIP=$(curl -sS icanhazip.com)
     data_ip="https://github.com/hokagelegend9999/ijin/raw/refs/heads/main/genom-pro"
-    IZIN=$(curl -sS "$data_ip")
+    IZIN=$(curl -sL "$data_ip")
     # Cari baris IP, lalu ambil kolom kedua (tanggal)
     exp_date=$(echo "$IZIN" | grep -w "$MYIP" | awk '{print $2}')
     if [ -z "$exp_date" ]; then
@@ -177,7 +177,7 @@ while true; do
 done
 EOF
 
-chmod +x /usr/bin/menu-bot
+chmod +x /usr/local/bin/menu-bot
 
 # --- PESAN TERAKHIR ---
 clear

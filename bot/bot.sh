@@ -48,20 +48,26 @@ domain=$(cat /etc/xray/domain)
 grenbo="\e[92;1m"
 
 #install
-apt update && apt upgrade
-apt install python3 python3-pip git -y
+echo "Memulai instalasi paket yang dibutuhkan..."
+apt update > /dev/null 2>&1 && apt upgrade -y > /dev/null 2>&1
+apt install python3 python3-pip git -y > /dev/null 2>&1
+echo "Instalasi paket selesai."
+sleep 1
+
+echo "Mengunduh dan menyiapkan file bot..."
 cd /usr/bin
 wget -q https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/bot.zip
-unzip -o bot.zip
+unzip -o bot.zip > /dev/null 2>&1
 mv bot/* /usr/bin
 chmod +x /usr/bin/*
 rm -rf bot.zip
-clear
 wget -q https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/bot/kyt.zip
-unzip -o kyt.zip
+unzip -o kyt.zip > /dev/null 2>&1
 pip3 install -r kyt/requirements.txt > /dev/null 2>&1
-
+echo "Penyiapan file bot selesai."
+sleep 1
 clear
+
 echo ""
 echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
 echo -e " \e[1;97;101m          ADD BOT PANEL          \e[0m"
@@ -84,6 +90,7 @@ echo -e PUB='"'$PUB'"' >> /usr/bin/kyt/var.txt
 echo -e HOST='"'$NS'"' >> /usr/bin/kyt/var.txt
 clear
 
+echo "Membuat layanan systemd untuk bot..."
 cat > /etc/systemd/system/kyt.service << END
 [Unit]
 Description=Simple kyt - @kyt
@@ -97,13 +104,19 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 END
+echo "Layanan systemd berhasil dibuat."
+sleep 1
 
+echo "Menjalankan dan mengaktifkan bot..."
 systemctl daemon-reload
+systemctl enable kyt > /dev/null 2>&1
 systemctl start kyt
-systemctl enable kyt
 systemctl restart kyt
+echo "Instalasi bot selesai."
+sleep 2
+
+# PINDAH KE DIREKTORI /root
 cd /root
-rm -f kyt.sh
 
 # ==================================================
 #           MENU MANAJEMEN BOT
@@ -155,7 +168,7 @@ while true; do
             echo "Bot telah direstart."
             sleep 1
             ;;
-        x)
+        x|X)
             clear
             echo "Terima kasih telah menggunakan skrip ini."
             break

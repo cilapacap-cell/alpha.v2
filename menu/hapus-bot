@@ -31,10 +31,10 @@ fun_bar() {
 }
 res1() {
     cd /root
-    rm -rf hokage.sh
+    rm -rf bot.sh
     cd /usr/bin
-    rm -rf hokage
-    rm -rf hokage.zip
+    rm -rf kyt
+    rm -rf kyt.zip
     rm -rf bot
     rm -rf bot.zip
     rm -rf bot-backup

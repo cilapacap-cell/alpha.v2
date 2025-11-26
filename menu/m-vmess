@@ -65,6 +65,7 @@ echo -e "  ${ORANGE}3.${NC} \033[0;36m Delete Vmess Account WS/GRPC${NC}"
 echo -e "  ${ORANGE}4.${NC} \033[0;36m Renew Vmess Account${NC}"
 echo -e "  ${ORANGE}5.${NC} \033[0;36m Check Vmess login Account${NC}"
 echo -e "  ${ORANGE}6.${NC} \033[0;36m Check Vmess Account${NC}"
+echo -e "  ${ORANGE}7.${NC} \033[0;36m Check Data User${NC}"
 echo -e "\033[1;93m└──────────────────────────────────────────┘\033[0m"
 echo -e ""
 read -p "Select From Options [ 1 - 7 ] : " menu
@@ -87,7 +88,7 @@ case $menu in
 6) clear ;
     member-ws
     ;;
-6) clear ;
+7) clear ;
     datauser
     ;;
 *) clear ;

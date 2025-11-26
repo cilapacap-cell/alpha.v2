@@ -10,7 +10,7 @@ WhiteBe="\033[5;37m"
 GreenBe="\033[5;32m"
 YellowBe="\033[5;33m"
 BlueBe="\033[5;34m"
-nama=$(cat /etc/xray/username)
+nama="HOKAGE LEGEND"
 
 # . Liner 
 function baris_panjang() {

@@ -63,6 +63,8 @@ echo -e "  ${ORANGE}2.${NC} \033[0;36m Create Trial XRAY Vless WS/GRPC${NC}"
 echo -e "  ${ORANGE}3.${NC} \033[0;36m Delete Account XRAY Vless WS/GRPC${NC}"
 echo -e "  ${ORANGE}4.${NC} \033[0;36m Renew Vless Account${NC}"
 echo -e "  ${ORANGE}5.${NC} \033[0;36m Check Vless login Account${NC}"
+echo -e "  ${ORANGE}6.${NC} \033[0;36m Check Vless Data User${NC}"
+
 echo -e "\033[1;93m└──────────────────────────────────────────┘\033[0m"
 echo -e ""
 read -p "Select From Options [ 1 - 5 ] : " menu
@@ -81,6 +83,9 @@ case $menu in
     ;;
 5) clear ;
     cekvless
+    ;;
+6) clear ;
+    datauser-vless
     ;;
 *)
     menu

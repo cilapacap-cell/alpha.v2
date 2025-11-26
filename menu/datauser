@@ -32,7 +32,7 @@ echo -e "${ungu}          $nama ${Xark}"
 baris_panjang
 echo ""
 read -rp "press any key for back"
-m-xray
+m-vmess
 }
 
 duration=3
@@ -84,7 +84,7 @@ function Cek_Config_Vmess() {
     if [ -z $user ]; then
 echo -e "User Tidak Ditemukan!!!"
 read -n 1 -s -r -p "Enter Back To Menu"
-m-xray
+m-vmess
 else
 CITY=$(cat /etc/xray/city)
 ISP=$(cat /etc/xray/isp)

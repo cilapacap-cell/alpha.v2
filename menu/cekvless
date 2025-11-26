@@ -1,87 +1,115 @@
 #!/bin/bash
-DF='\e[39m'
-Bold='\e[1m'
-Blink='\e[5m'
-yell='\e[33m'
-red='\e[31m'
-green='\e[32m'
-blue='\e[34m'
-PURPLE='\e[35m'
-cyan='\e[36m'
-Lred='\e[91m'
-Lgreen='\e[92m'
-Lyellow='\e[93m'
-NC='\e[0m'
-GREEN='\033[0;32m'
-ORANGE='\033[0;33m'
-LIGHT='\033[0;37m'
-grenbo="\e[92;1m"
-clear
+# //====================================================
+# //     System Request:Debian 9+/Ubuntu 18.04+/20+
+# //     Remodified by: Gemini for User (Vless Fix)
+# //====================================================
 
-# --- FUNGSI KONVERSI ---
-function con() {
-    local -i bytes=$1;
-    if [[ $bytes -lt 1024 ]]; then
-        echo "${bytes}B"
-    elif [[ $bytes -lt 1048576 ]]; then
-        echo "$(( (bytes + 1023)/1024 ))KB"
-    elif [[ $bytes -lt 1073741824 ]]; then
-        echo "$(( (bytes + 1048575)/1048576 ))MB"
-    else
-        echo "$(( (bytes + 1073741823)/1073741824 ))GB"
-    fi
-}
+# --- DEFINISI WARNA ---
+BIBlack='\033[1;90m'      
+BIRed='\033[1;91m'        
+BIGreen='\033[1;92m'      
+BIYellow='\033[1;93m'     
+BIBlue='\033[1;94m'       
+BIPurple='\033[1;95m'     
+BICyan='\033[1;96m'       
+BIWhite='\033[1;97m'      
+NC='\033[0m'              
 
 # --- HEADER ---
-echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e " \e[1;97;101m            CEK VLESS ACCOUNT             \e[0m"
-echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+clear
+echo -e "${BICyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BIPurple}           ⚡  MONITOR USER VLESS  ⚡             ${NC}"
+echo -e "${BICyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
-# --- AMBIL DAFTAR USER VLESS DARI KONFIGURASI XRAY (PENANDA '#&') ---
-data=( `cat /etc/xray/config.json | grep '#&' | cut -d ' ' -f 2 | sort | uniq`);
+echo -n > /tmp/other.txt
 
-# --- LOOP UNTUK SETIAP USER ---
+# --- DETEKSI USER VLESS ---
+# Mencari tanda '#!' (Standar Vless) atau '###' (Jika script Anda pakai ### untuk semua)
+# Kita coba cari '#!' dulu, jika kosong coba cari '###'
+if grep -q "^#!" /etc/xray/config.json; then
+    data=( `cat /etc/xray/config.json | grep '^#!' | cut -d ' ' -f 2 | sort | uniq`);
+else
+    # Fallback jika ternyata Vless pakai ###
+    data=( `cat /etc/xray/config.json | grep '^###' | cut -d ' ' -f 2 | sort | uniq`);
+fi
+
+echo -e "${BIWhite}  Time     : $(date +"%H:%M:%S")${NC}"
+echo -e "${BICyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
 for akun in "${data[@]}"
 do
-    # --- AMBIL INFO STATIS (LIMIT) ---
-    iplimit=$(cat /etc/kyt/limit/vless/ip/${akun} 2>/dev/null)
-    
-    # --- AMBIL INFO KUOTA ---
-    byte_usage=$(cat /etc/vless/${akun} 2>/dev/null)
-    gb_usage=$(con ${byte_usage})
-    
-    byte_limit=$(cat /etc/limit/vless/${akun} 2>/dev/null)
-    gb_limit=$(con ${byte_limit})
-
-    # --- AMBIL INFO LOGIN TERAKHIR (DINAMIS) ---
-    echo -n > /tmp/ipvless.txt
-    cat /var/log/xray/access.log | grep -w "$akun" | tail -n 500 | cut -d " " -f 3 | sed 's/tcp://g' | cut -d ":" -f 1 | sort | uniq >> /tmp/ipvless.txt
-    jum2=$(cat /tmp/ipvless.txt | wc -l)
-    lastlogin=$(cat /var/log/xray/access.log | grep -w "$akun" | tail -n 500 | cut -d " " -f 2 | tail -1)
-
-    # --- PENENTUAN STATUS ONLINE/OFFLINE ---
-    if [[ $jum2 -gt 0 ]]; then
-        status="Online"
-    else
-        status="Offline"
+    if [[ -z "$akun" ]]; then
+        continue
     fi
 
-    # --- TAMPILKAN OUTPUT DENGAN LOLCAT ---
-    echo -e " \033[1;36m┌──────────────────────────────────────┐\033[0m"
-    printf "    %-12s: %s\n" "UserName" "${akun}" | lolcat
-    printf "    %-12s: %s\n" "Status" "${status}" | lolcat
-    printf "    %-12s: %s\n" "Usage Quota" "${gb_usage}" | lolcat
-    printf "    %-12s: %s\n" "Limit Quota" "${gb_limit}" | lolcat
-    printf "    %-12s: %s\n" "Limit IP" "$iplimit" | lolcat
-    printf "    %-12s: %s\n" "Login IP" "$jum2" | lolcat
-    printf "    %-12s: %s\n" "Last Login" "$lastlogin" | lolcat
-    echo -e " \033[1;36m└──────────────────────────────────────┘\033[0m"
+    # --- CARI IP YANG TERHUBUNG (LOGIC BARU) ---
+    # Mencari IP yang mengakses user tersebut dalam 500 baris log terakhir
+    # Menggunakan awk agar lebih presisi mengambil IP
+    
+    # 1. Ambil baris log yang memuat nama user
+    log_user=$(grep -w "$akun" /var/log/xray/access.log | tail -n 500)
+    
+    # 2. Jika user ditemukan di log
+    if [[ -n "$log_user" ]]; then
+        # Ambil IP unik dari log tersebut
+        list_ip=$(echo "$log_user" | awk '{print $3}' | cut -d: -f1 | grep -v "127.0.0.1" | sort | uniq)
+        jumlah_ip=$(echo "$list_ip" | wc -l)
+        
+        # Jika jumlah IP lebih dari 0 (berarti ada yang connect)
+        if [[ "$list_ip" != "" ]]; then
+            
+            # --- CEK INFO KUOTA (FIX PATH) ---
+            # Cek penggunaan
+            if [[ -e /etc/vless/${akun} ]]; then
+                byte=$(cat /etc/vless/${akun})
+                if [[ "$byte" -gt 0 ]]; then
+                     usage_gb=$((byte / 1024 / 1024 / 1024))
+                     usage_fmt="${usage_gb} GB"
+                     if [[ "$usage_gb" -eq 0 ]]; then
+                        usage_mb=$((byte / 1024 / 1024))
+                        usage_fmt="${usage_mb} MB"
+                     fi
+                else
+                     usage_fmt="0 MB"
+                fi
+            else
+                usage_fmt="0 MB"
+            fi
 
-    # Hapus file temporary
-    rm -f /tmp/ipvless.txt
+            # Cek Limit
+            if [[ -e /etc/limit/vless/${akun} ]]; then
+                 limit_byte=$(cat /etc/limit/vless/${akun})
+                 limit_gb=$((limit_byte / 1024 / 1024 / 1024))
+                 limit_fmt="${limit_gb} GB"
+            else
+                 limit_fmt="Unlimited"
+            fi
+
+            # Cek Limit IP
+            if [[ -e /etc/kyt/limit/vless/ip/${akun} ]]; then
+                iplimit=$(cat /etc/kyt/limit/vless/ip/${akun})
+            else
+                iplimit="None"
+            fi
+            
+            lastlogin=$(echo "$log_user" | tail -n 1 | awk '{print $2}')
+
+            # --- TAMPILKAN STATUS ---
+            echo -e " ${BIWhite}User       : ${BIGreen}${akun}${NC}"
+            echo -e " ${BIWhite}Status     : ${BIGreen}ONLINE${NC}"
+            echo -e " ${BIWhite}Last Login : $lastlogin"
+            echo -e " ${BIWhite}IP Login   : ${BIYellow}$jumlah_ip IP${NC} / Max $iplimit"
+            echo -e " ${BIWhite}Quota      : $usage_fmt / $limit_fmt"
+            echo -e " ${BIBlack}--------------------------------------------------${NC}"
+            
+            # Tampilkan list IP-nya
+            echo -e " ${BIPurple}Connected IP:${NC}"
+            for ip in $list_ip; do
+                echo -e "  ➥ ${BICyan}$ip${NC}"
+            done
+            echo -e "${BICyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        fi
+    fi
 done
 
-# --- FOOTER ---
-echo ""
-echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
 echo ""

@@ -81,7 +81,7 @@ case $menu in
     renewtr
     ;;
 5)
-    cektr
+    check-tro
     ;;
 *)
     menu

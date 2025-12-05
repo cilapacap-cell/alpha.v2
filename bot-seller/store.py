@@ -1,306 +1,305 @@
-import telebot
-import json
 import os
+import json
 import subprocess
-import uuid
+import asyncio
+import time
 import random
 import string
-import datetime
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+import base64
+import uuid
+from telethon import TelegramClient, events, Button
+from telethon.errors import AlreadyInConversationError
 
 # ==========================================
-# KONFIGURASI PATH & DATABASE
+# KONFIGURASI UTAMA
 # ==========================================
-DIR_MAIN = '/etc/alpha-store'
+DIR_MAIN = '/usr/local/sbin/alpha-vps'
 CONFIG_FILE = f'{DIR_MAIN}/config.json'
 DB_USERS = f'{DIR_MAIN}/users_db.json'
+PRICES = { "ssh": 5000, "vmess": 5000, "vless": 5000 } # Harga per akun
+DEFAULT_EXP = 30 # Masa aktif default (hari) untuk pembelian
+WS_PATH = "/ssh" 
 
-# KONFIGURASI HARGA & DEFAULT
-PRICES = {
-    "ssh": 5000,
-    "vmess": 5000,
-    "vless": 5000,
-    "trojan": 5000
-}
-WS_PATH = "/ssh"  # Sesuaikan dengan settingan Nginx/Haproxy Anda
+# ==========================================
+# LOAD CONFIG & DATABASE
+# ==========================================
+if not os.path.exists(DIR_MAIN):
+    os.makedirs(DIR_MAIN)
 
-# Load Config
+# Cek Config
 try:
     with open(CONFIG_FILE, 'r') as f:
         config = json.load(f)
-    BOT_TOKEN = config['bot_token']
-    ADMIN_ID = str(config['admin_id'])
-    # Ambil IP/Domain VPS otomatis
-    try:
-        DOMAIN = config.get('domain', subprocess.check_output("curl -s ipv4.icanhazip.com", shell=True).decode().strip())
-    except:
-        DOMAIN = "127.0.0.1"
+    # Inisialisasi Telethon (Gantikan Telebot)
+    bot = TelegramClient('store_session', config['api_id'], config['api_hash']).start(bot_token=config['bot_token'])
+    ADMIN_ID = int(config['admin_id'])
+    DOMAIN = config.get('domain', "127.0.0.1")
 except Exception as e:
-    print(f"Error Loading Config: {e}")
-    # Default dummy agar script tidak crash saat installasi awal
-    BOT_TOKEN = "TOKEN_DUMMY" 
-    ADMIN_ID = "0"
-    DOMAIN = "127.0.0.1"
+    print(f"Error Config: {e}")
+    print("Pastikan config.json berisi: api_id, api_hash, bot_token, admin_id")
+    exit()
 
-bot = telebot.TeleBot(BOT_TOKEN)
-
-# ==========================================
-# SISTEM DATABASE (SALDO)
-# ==========================================
+# Cek Database Saldo
 if not os.path.exists(DB_USERS):
-    with open(DB_USERS, 'w') as f:
-        json.dump({}, f)
+    with open(DB_USERS, 'w') as f: json.dump({}, f)
 
 def load_db():
     try:
-        with open(DB_USERS, 'r') as f:
-            return json.load(f)
+        with open(DB_USERS, 'r') as f: return json.load(f)
     except: return {}
 
 def save_db(data):
-    with open(DB_USERS, 'w') as f:
-        json.dump(data, f, indent=4)
+    with open(DB_USERS, 'w') as f: json.dump(data, f, indent=4)
 
-def get_balance(user_id):
+def get_balance(uid):
     db = load_db()
-    return db.get(str(user_id), {}).get('balance', 0)
+    return db.get(str(uid), {}).get('balance', 0)
 
-def reduce_balance(user_id, amount):
+def reduce_balance(uid, amount):
     db = load_db()
-    uid = str(user_id)
-    if uid not in db: return False
-    if db[uid]['balance'] >= amount:
-        db[uid]['balance'] -= amount
-        save_db(db)
-        return True
-    return False
+    uid = str(uid)
+    if uid not in db: db[uid] = {'balance': 0}
+    
+    if db[uid]['balance'] < amount:
+        return False
+    
+    db[uid]['balance'] -= amount
+    save_db(db)
+    return True
 
-def add_balance(user_id, amount):
+def add_balance(uid, amount):
     db = load_db()
-    uid = str(user_id)
-    if uid not in db:
-        db[uid] = {'balance': 0, 'username': 'Unknown'}
+    uid = str(uid)
+    if uid not in db: db[uid] = {'balance': 0}
     db[uid]['balance'] += amount
     save_db(db)
 
 # ==========================================
-# LOGIKA PEMBUATAN AKUN (SSH & XRAY)
+# FUNGSI CREATE AKUN (BACKEND)
 # ==========================================
-def get_random_password(length=6):
-    return ''.join(random.choice(string.ascii_letters + string.digits) for i in range(length))
+def get_rand_pass():
+    return ''.join(random.choice(string.ascii_letters + string.digits) for i in range(6))
 
-def restart_service(service_name):
-    os.system(f'systemctl restart {service_name}')
-
-def create_ssh_logic(username, password, days):
+def create_ssh_system(user, pw, days):
     try:
+        # Menghitung tanggal expired
         cmd_date = f"date -d '+{days} days' +'%Y-%m-%d'"
-        exp_date = subprocess.check_output(cmd_date, shell=True).decode().strip()
+        exp = subprocess.check_output(cmd_date, shell=True).decode().strip()
         
-        # Command Linux Useradd
-        os.system(f"useradd -e {exp_date} -s /bin/false -M {username}")
-        os.system(f"echo '{username}:{password}' | chpasswd")
-        
-        return True, exp_date
+        # Membuat user system
+        cmd_add = f"useradd -e {exp} -s /bin/false -M {user} && echo '{user}:{pw}' | chpasswd"
+        subprocess.check_output(cmd_add, shell=True)
+        return True, exp
     except Exception as e:
-        print(f"Error Create SSH: {e}")
-        return False, None
+        return False, str(e)
 
-def create_xray_logic(protocol, username, days):
+def create_xray_system(proto, user, days):
     try:
-        u_id = str(uuid.uuid4())
-        path_config = '/etc/xray/config.json'
+        uid = str(uuid.uuid4())
+        path = '/etc/xray/config.json'
         
-        with open(path_config, 'r') as f:
-            data = json.load(f)
+        if not os.path.exists(path):
+            return False, "Xray Config Not Found"
+
+        with open(path, 'r') as f: data = json.load(f)
         
         found = False
-        for inbound in data['inbounds']:
-            if inbound['protocol'] == protocol:
-                email = f"{username}@{protocol}"
-                client_data = {"id": u_id, "email": email}
-                if protocol == "vmess":
-                    client_data["alterId"] = 0
-                
-                inbound['settings']['clients'].append(client_data)
+        for ib in data['inbounds']:
+            if ib['protocol'] == proto:
+                client = {"id": uid, "email": f"{user}@{proto}"}
+                if proto == "vmess": client["alterId"] = 0
+                # Tambahkan client ke list
+                if 'clients' in ib['settings']:
+                    ib['settings']['clients'].append(client)
+                else:
+                    ib['settings']['clients'] = [client]
                 found = True
                 break
         
         if found:
-            with open(path_config, 'w') as f:
-                json.dump(data, f, indent=2)
-            restart_service('xray')
-            return True, u_id
-        else:
-            return False, "Protocol not found"
+            with open(path, 'w') as f: json.dump(data, f, indent=2)
+            os.system('systemctl restart xray')
+            return True, uid
+        return False, "Protocol Not Found in Config"
     except Exception as e:
         return False, str(e)
 
 # ==========================================
-# HANDLER BOT TELEGRAM
+# BOT INTERFACE (MENU & LOGIC)
 # ==========================================
 
-@bot.message_handler(commands=['start', 'menu'])
-def menu_handler(message):
-    uid = str(message.chat.id)
-    name = message.from_user.first_name
+@bot.on(events.NewMessage(pattern='/start'))
+async def start_handler(event):
+    sender = await event.get_sender()
+    uid = sender.id
+    bal = get_balance(uid)
     
-    # Auto Register
-    db = load_db()
-    if uid not in db:
-        db[uid] = {'balance': 0, 'username': name}
-        save_db(db)
+    buttons = [
+        [Button.inline(f"🚀 Buy SSH (Rp {PRICES['ssh']:,})", data="buy_ssh")],
+        [Button.inline(f"⚡ Buy VMESS (Rp {PRICES['vmess']:,})", data="buy_vmess"),
+         Button.inline(f"🌐 Buy VLESS (Rp {PRICES['vless']:,})", data="buy_vless")],
+        [Button.inline("💰 Cek Saldo", data="cek_saldo")]
+    ]
     
-    saldo = db[uid]['balance']
-    
-    markup = InlineKeyboardMarkup()
-    markup.row_width = 2
-    markup.add(
-        InlineKeyboardButton(f"🛒 SSH (Rp {PRICES['ssh']})", callback_data="buy_ssh"),
-        InlineKeyboardButton(f"🛒 VMESS (Rp {PRICES['vmess']})", callback_data="buy_vmess"),
-        InlineKeyboardButton(f"🛒 VLESS (Rp {PRICES['vless']})", callback_data="buy_vless"),
-        InlineKeyboardButton("👤 Info Akun", callback_data="info_user")
-    )
-    
+    # Menu Khusus Admin
     if uid == ADMIN_ID:
-        markup.add(InlineKeyboardButton("👑 Topup User (Admin)", callback_data="admin_topup"))
+        buttons.append([Button.inline("➕ Topup Saldo (Admin)", data="admin_topup")])
 
-    text = (
-        f"<b>🏪 ALPHA STORE PANEL</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━\n"
-        f"👋 Halo, <b>{name}</b>\n"
-        f"💰 Saldo Anda: <b>Rp {saldo:,}</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━\n"
-        f"Silakan pilih layanan yang ingin dibeli:"
-    )
-    bot.reply_to(message, text, parse_mode='HTML', reply_markup=markup)
+    msg = f"""
+<b>🛍️ ALPHA STORE PANEL</b>
+━━━━━━━━━━━━━━━━━━━
+👋 <b>Halo,</b> {sender.first_name}
+🆔 <b>ID:</b> <code>{uid}</code>
+💰 <b>Saldo:</b> <code>Rp {bal:,}</code>
+━━━━━━━━━━━━━━━━━━━
+Silakan pilih layanan di bawah ini:
+"""
+    await event.respond(msg, buttons=buttons, parse_mode='html')
 
-@bot.callback_query_handler(func=lambda call: True)
-def callback_logic(call):
-    uid = call.message.chat.id
-    
-    if call.data == "info_user":
-        bal = get_balance(uid)
-        bot.answer_callback_query(call.id, f"Saldo Anda: Rp {bal:,}", show_alert=True)
+# HANDLER CEK SALDO
+@bot.on(events.CallbackQuery(data=b'cek_saldo'))
+async def cek_saldo(event):
+    uid = event.sender_id
+    bal = get_balance(uid)
+    await event.answer(f"💰 Saldo Anda: Rp {bal:,}", alert=True)
 
-    elif call.data.startswith("buy_"):
-        tipe = call.data.split("_")[1]
-        harga = PRICES[tipe]
-        saldo = get_balance(uid)
-        
-        if saldo < harga:
-            bot.answer_callback_query(call.id, "❌ Saldo tidak cukup! Hubungi Admin.", show_alert=True)
-            return
+# HANDLER PEMBELIAN (INTERAKTIF)
+@bot.on(events.CallbackQuery(pattern=b'buy_(.*)'))
+async def buy_handler(event):
+    tipe = event.data.decode().split('_')[1] # ssh, vmess, atau vless
+    uid = event.sender_id
+    chat = event.chat_id
+    harga = PRICES.get(tipe, 0)
+    bal = get_balance(uid)
 
-        msg = bot.send_message(uid, f"<b>🔹 BELI {tipe.upper()}</b>\n\nMasukkan Username yang diinginkan:", parse_mode='HTML')
-        bot.register_next_step_handler(msg, process_purchase, tipe, harga)
+    # 1. Cek Saldo Awal
+    if bal < harga:
+        await event.answer(f"❌ Saldo Kurang! Butuh Rp {harga:,}", alert=True)
+        return
 
-    elif call.data == "admin_topup":
-        msg = bot.send_message(uid, "<b>👑 ADMIN TOPUP</b>\n\nFormat: <code>ID_USER JUMLAH</code>", parse_mode='HTML')
-        bot.register_next_step_handler(msg, process_topup)
-
-def process_purchase(message, tipe, harga):
+    # Mulai Percakapan Interaktif
     try:
-        user_req = message.text.strip().replace(" ", "")
-        uid = message.chat.id
-        
-        # Potong Saldo
-        if not reduce_balance(uid, harga):
-            bot.reply_to(message, "❌ Transaksi Gagal: Saldo Kurang.")
-            return
+        async with bot.conversation(chat, timeout=120) as convo:
+            # A. Input Username
+            await convo.send_message(f"<b>🛒 PEMBELIAN {tipe.upper()}</b>\n\nMasukkan <b>Username</b> yang diinginkan:\n(Ketik /cancel untuk batal)", parse_mode='html')
+            username_msg = await convo.get_response()
+            username = username_msg.text.strip()
+            
+            if username == '/cancel':
+                await convo.send_message("❌ Transaksi Dibatalkan.")
+                return
+            
+            # B. Input Password (Khusus SSH)
+            password = get_rand_pass() # Default random
+            if tipe == 'ssh':
+                await convo.send_message(f"Masukkan <b>Password</b>:\n(Ketik 'auto' untuk password acak)", parse_mode='html')
+                pw_msg = await convo.get_response()
+                if pw_msg.text.strip().lower() != 'auto':
+                    password = pw_msg.text.strip()
+            
+            # C. Konfirmasi
+            confirm_msg = await convo.send_message(
+                f"<b>KONFIRMASI PEMBELIAN</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━\n"
+                f"📦 Layanan: {tipe.upper()}\n"
+                f"👤 User: {username}\n"
+                f"💰 Harga: Rp {harga:,}\n"
+                f"━━━━━━━━━━━━━━━━━━━\n"
+                f"Ketik <b>SETUJU</b> untuk memproses.", parse_mode='html'
+            )
+            confirm_input = await convo.get_response()
+            
+            if confirm_input.text.strip().lower() != 'setuju':
+                await convo.send_message("❌ Transaksi Dibatalkan.")
+                return
 
-        bot.send_message(uid, "⏳ Sedang memproses transaksi...")
-        
-        # --- PROSES SSH ---
-        if tipe == "ssh":
-            passwd = get_random_password(6)
-            success, exp = create_ssh_logic(user_req, passwd, 30)
+            # PROSES TRANSAKSI
+            wait_msg = await convo.send_message("⏳ Sedang memproses...")
+            
+            # Potong Saldo (Cek lagi takutnya double)
+            if not reduce_balance(uid, harga):
+                await wait_msg.edit("❌ Saldo tidak cukup saat memproses.")
+                return
+
+            # Create Akun
+            success = False
+            result_text = ""
+            
+            if tipe == 'ssh':
+                ok, res = create_ssh_system(username, password, DEFAULT_EXP)
+                if ok:
+                    success = True
+                    result_text = f"""
+✅ <b>SSH CREATED SUCCESSFULLY</b>
+━━━━━━━━━━━━━━━━━━━
+<b>Username:</b> <code>{username}</code>
+<b>Password:</b> <code>{password}</code>
+<b>Expired:</b> {res}
+<b>Host:</b> <code>{DOMAIN}</code>
+━━━━━━━━━━━━━━━━━━━
+Payload WS:
+<code>GET {WS_PATH} HTTP/1.1[crlf]Host: {DOMAIN}[crlf]Upgrade: websocket[crlf][crlf]</code>
+"""
+                else:
+                    result_text = f"❌ Gagal membuat SSH: {res}"
+
+            elif tipe in ['vmess', 'vless']:
+                ok, res = create_xray_system(tipe, username, DEFAULT_EXP) # res adalah UUID atau Error
+                if ok:
+                    success = True
+                    link = ""
+                    if tipe == 'vmess':
+                        cfg = {"v":"2","ps":username,"add":DOMAIN,"port":"443","id":res,"net":"ws","path":f"/{tipe}","tls":"tls"}
+                        link = "vmess://" + base64.b64encode(json.dumps(cfg).encode()).decode()
+                    else:
+                        link = f"vless://{res}@{DOMAIN}:443?path=%2F{tipe}&security=tls&type=ws#{username}"
+                    
+                    result_text = f"""
+✅ <b>{tipe.upper()} CREATED SUCCESSFULLY</b>
+━━━━━━━━━━━━━━━━━━━
+<b>Remarks:</b> <code>{username}</code>
+<b>Domain:</b> <code>{DOMAIN}</code>
+<b>UUID:</b> <code>{res}</code>
+<b>Expired:</b> {DEFAULT_EXP} Days
+━━━━━━━━━━━━━━━━━━━
+<b>Link:</b> <code>{link}</code>
+"""
+                else:
+                    result_text = f"❌ Gagal membuat {tipe.upper()}: {res}"
+
+            await wait_msg.delete()
             
             if success:
-                res = f"""
-<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>
-<b>👑 SSH WEBSOCKET ACCOUNT</b>
-<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>
-
-<b>👤 Username :</b> <code>{user_req}</code>
-<b>🔑 Password :</b> <code>{passwd}</code>
-<b>🌐 Host/IP  :</b> <code>{DOMAIN}</code>
-<b>📅 Expired  :</b> <code>{exp}</code>
-
-<b>⚙️ DETAIL PORT & PATH</b>
-<b>• SSH OpenSSH :</b> <code>22</code>
-<b>• SSH Dropbear:</b> <code>109, 143</code>
-<b>• SSH WS HTTP :</b> <code>80, 2082, 8080</code>
-<b>• SSH WS SSL  :</b> <code>443, 2053</code>
-<b>• WS Path     :</b> <code>{WS_PATH}</code>
-
-<b>🧩 FORMAT PAYLOAD (HTTP/WS)</b>
-<code>GET {WS_PATH} HTTP/1.1[crlf]Host: {DOMAIN}[crlf]Upgrade: websocket[crlf][crlf]</code>
-
-<b>🔗 FORMAT KONEKSI</b>
-<b>• WS :</b> <code>{DOMAIN}:80@{user_req}:{passwd}</code>
-<b>• SSL:</b> <code>{DOMAIN}:443@{user_req}:{passwd}</code>
-<b>• UDP:</b> <code>{DOMAIN}:1-65535@{user_req}:{passwd}</code>
-
-<b>📊 INFO LAIN</b>
-<b>• Limit IP :</b> <code>2 Device</code>
-<b>• Harga    :</b> <code>Rp {harga:,}</code>
-<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>
-"""
+                await convo.send_message(result_text, parse_mode='html')
             else:
-                add_balance(uid, harga) # Refund
-                res = "❌ Gagal membuat SSH. Saldo dikembalikan."
-
-        # --- PROSES XRAY (VMESS/VLESS) ---
-        elif tipe in ["vmess", "vless"]:
-            success, uuid_res = create_xray_logic(tipe, user_req, 30)
-            if success:
-                if tipe == "vmess":
-                    # Generate Link Vmess JSON
-                    vmess_config = {
-                        "v": "2", "ps": user_req, "add": DOMAIN, "port": "443", "id": uuid_res,
-                        "aid": "0", "net": "ws", "path": f"/{tipe}", "type": "none", "host": DOMAIN, "tls": "tls"
-                    }
-                    import base64
-                    link = "vmess://" + base64.b64encode(json.dumps(vmess_config).encode()).decode()
-                else:
-                    link = f"vless://{uuid_res}@{DOMAIN}:443?path=%2F{tipe}&security=tls&encryption=none&type=ws#{user_req}"
-                
-                res = (
-                    f"<b>✅ TRANSAKSI BERHASIL!</b>\n"
-                    f"━━━━━━━━━━━━━━━━━━━\n"
-                    f"<b>Layanan:</b> {tipe.upper()}\n"
-                    f"<b>Remarks:</b> <code>{user_req}</code>\n"
-                    f"<b>Domain:</b> <code>{DOMAIN}</code>\n"
-                    f"<b>UUID:</b> <code>{uuid_res}</code>\n"
-                    f"<b>Harga:</b> Rp {harga:,}\n"
-                    f"━━━━━━━━━━━━━━━━━━━\n"
-                    f"<code>{link}</code>"
-                )
-            else:
+                # Refund saldo jika gagal
                 add_balance(uid, harga)
-                res = f"❌ Gagal membuat {tipe.upper()}. Saldo dikembalikan."
+                await convo.send_message(f"⚠️ Transaksi Gagal. Saldo dikembalikan.\nError: {result_text}")
 
-        bot.reply_to(message, res, parse_mode='HTML')
-
+    except AlreadyInConversationError:
+        await event.respond("⚠️ Selesaikan transaksi sebelumnya dulu!", alert=True)
+    except asyncio.TimeoutError:
+        await event.respond("❌ Waktu habis. Transaksi dibatalkan.")
     except Exception as e:
-        bot.reply_to(message, f"Error: {e}")
+        await event.respond(f"❌ Error System: {e}")
 
-def process_topup(message):
-    try:
-        data = message.text.split()
-        target_id = data[0]
-        amount = int(data[1])
-        
-        add_balance(target_id, amount)
-        bot.reply_to(message, f"✅ Berhasil tambah saldo <b>Rp {amount:,}</b> ke ID <code>{target_id}</code>", parse_mode='HTML')
-    except:
-        bot.reply_to(message, "❌ Format salah. Gunakan: ID JUMLAH")
+# HANDLER TOPUP (ADMIN)
+@bot.on(events.CallbackQuery(data=b'admin_topup'))
+async def topup_handler(event):
+    chat = event.chat_id
+    if event.sender_id != ADMIN_ID: return
 
-# MAIN LOOP
-print("Bot Started...")
-while True:
     try:
-        bot.polling(none_stop=True)
-    except Exception as e:
-        print(f"Error Polling: {e}")
+        async with bot.conversation(chat) as convo:
+            await convo.send_message("<b>ADMIN TOPUP</b>\nMasukkan format: <code>ID_USER JUMLAH</code>\nContoh: <code>12345678 50000</code>", parse_mode='html')
+            resp = await convo.get_response()
+            try:
+                target_id, amount = resp.text.split()
+                add_balance(target_id, int(amount))
+                await convo.send_message(f"✅ Sukses tambah Rp {amount} ke ID {target_id}")
+            except:
+                await convo.send_message("❌ Format salah.")
+    except: pass
+
+print("Store Bot Berjalan (Telethon)...")
+bot.run_until_disconnected()

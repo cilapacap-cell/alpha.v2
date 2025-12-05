@@ -1,31 +1,22 @@
 #!/bin/bash
 
-# Konfigurasi Folder
+# Konfigurasi
 WORKDIR="/usr/local/sbin/alpha-vps"
-mkdir -p $WORKDIR
-
-# Warna
 GREEN='\033[0;32m'
 NC='\033[0m'
 
-echo -e "${GREEN}=== [1/3] MEMPERBAIKI ENVIRONMENT PYTHON ===${NC}"
-
-# Hapus library konflik (Fix Ubuntu 20.04)
+echo -e "${GREEN}[1/3] FIX PIP & PYTHON...${NC}"
+# Fix Error Ubuntu 20.04
 rm -rf /usr/lib/python3/dist-packages/OpenSSL
-rm -rf /usr/lib/python3/dist-packages/pyOpenSSL-*.egg-info
-
-# Install Pip Resmi
 apt update && apt install curl python3-pip -y
 curl https://bootstrap.pypa.io/pip/3.8/get-pip.py -o get-pip.py
 python3 get-pip.py
 rm -f get-pip.py
 
-# Install Module Bot
-echo -e "${GREEN}=== [2/3] MENGINSTALL MODULE BOT ===${NC}"
+echo -e "${GREEN}[2/3] INSTALL MODULE BOT...${NC}"
 pip3 install pyTelegramBotAPI paramiko requests telethon cryptography
 
-# Membuat Service Systemd
-echo -e "${GREEN}=== [3/3] MEMBUAT SERVICE SYSTEMD ===${NC}"
+echo -e "${GREEN}[3/3] SETUP SERVICE...${NC}"
 cat > /etc/systemd/system/alpha-store.service << END
 [Unit]
 Description=Alpha Script Store Bot
@@ -43,5 +34,4 @@ END
 
 systemctl daemon-reload
 systemctl enable alpha-store
-
-echo -e "${GREEN}✅ SETUP SELESAI! Silakan lanjutkan membuat file berikutnya.${NC}"
+echo -e "${GREEN}✅ Setup Selesai! Lanjutkan membuat file berikutnya.${NC}"

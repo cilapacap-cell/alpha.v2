@@ -1,22 +1,25 @@
 #!/bin/bash
-DF='\e[39m'
-Bold='\e[1m'
-Blink='\e[5m'
-yell='\e[33m'
-red='\e[31m'
-green='\e[32m'
-blue='\e[34m'
-PURPLE='\e[35m'
-cyan='\e[36m'
-Lred='\e[91m'
-Lgreen='\e[92m'
-Lyellow='\e[93m'
+# Script Modifikasi: Fix Path & Gradient Colors
+
+# --- Cek & Install Lolcat untuk Gradasi ---
+if ! command -v lolcat &> /dev/null; then
+    echo "Menginstall modul warna..."
+    apt-get install ruby -y &> /dev/null
+    gem install lolcat &> /dev/null
+fi
+
+# --- Definisi Warna Solid ---
+# Kita gunakan warna solid untuk data agar mudah dibaca
 NC='\e[0m'
+CYAN='\033[0;36m'
+WHITE='\033[0;37m'
+GOLD='\033[0;33m'
 GREEN='\033[0;32m'
-ORANGE='\033[0;33m'
-LIGHT='\033[0;37m'
-grenbo="\e[92;1m"
+RED='\033[0;31m'
+
 clear
+
+# --- Fungsi Konversi Byte ---
 function con() {
     local -i bytes=$1;
     if [[ $bytes -lt 1024 ]]; then
@@ -29,52 +32,94 @@ function con() {
         echo "$(( (bytes + 1073741823)/1073741824 ))GB"
     fi
 }
+
 echo -n > /tmp/other.txt
+# Ambil data user
 data=( `cat /etc/xray/config.json | grep '###' | cut -d ' ' -f 2 | sort | uniq`);
-echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e " \e[1;97;101m           CEK VMESS ACCOUNT            \e[0m"
-echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+
+# --- Header Bergradasi ---
+echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | lolcat
+echo -e "          MONITOR VMESS USER UTAMA        " | lolcat
+echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | lolcat
+
 for akun in "${data[@]}"
 do
-if [[ -z "$akun" ]]; then
-akun="tidakada"
-fi
-echo -n > /tmp/ipvmess.txt
-data2=( `cat /var/log/xray/access.log | tail -n 500 | cut -d " " -f 3 | sed 's/tcp://g' | cut -d ":" -f 1 | sort | uniq`);
-for ip in "${data2[@]}"
-do
-jum=$(cat /var/log/xray/access.log | grep -w "$akun" | tail -n 500 | cut -d " " -f 3 | sed 's/tcp://g' | cut -d ":" -f 1 | grep -w "$ip" | sort | uniq)
-if [[ "$jum" = "$ip" ]]; then
-echo "$jum" >> /tmp/ipvmess.txt
-else
-echo "$ip" >> /tmp/other.txt
-fi
-jum2=$(cat /tmp/ipvmess.txt)
-sed -i "/$jum2/d" /tmp/other.txt > /dev/null 2>&1
-done
-jum=$(cat /tmp/ipvmess.txt)
-if [[ -z "$jum" ]]; then
-echo > /dev/null
-else
-iplimit=$(cat /etc/vmess/${akun}IP 2>/dev/null)
-jum2=$(cat /tmp/ipvmess.txt | wc -l)
-byte=$(cat /etc/vmess/${akun})
-lim=$(con ${byte})
-wey=$(cat /etc/limit/vmess/${akun})
-gb=$(con ${wey})
-lastlogin=$(cat /var/log/xray/access.log | grep -w "$akun" | tail -n 500 | cut -d " " -f 2 | tail -1)
-echo -e " \033[1;36m┌──────────────────────────────────────┐\033[0m"
-printf "  %-13s %-7s %-8s %2s\n" "  UserName : ${akun}" | lolcat
-printf "  %-13s %-7s %-8s %2s\n" "  Login    : $lastlogin" | lolcat
-printf "  %-13s %-7s %-8s %2s\n" "  Usage Quota : ${gb}" | lolcat
-printf "  %-13s %-7s %-8s %2s\n" "  Limit Quota : ${lim}" | lolcat
-printf "  %-13s %-7s %-8s %2s\n" "  Limit IP : $iplimit" | lolcat
-printf "  %-13s %-7s %-8s %2s\n" "  Login IP : $jum2" | lolcat
-echo -e " \033[1;36m└──────────────────────────────────────┘\033[0m"
-fi 
-rm -rf /tmp/ipvmess.txt
+    if [[ -z "$akun" ]]; then
+        akun="tidakada"
+    fi
+    
+    echo -n > /tmp/ipvmess.txt
+    data2=( `cat /var/log/xray/access.log | tail -n 500 | cut -d " " -f 3 | sed 's/tcp://g' | cut -d ":" -f 1 | sort | uniq`);
+    
+    for ip in "${data2[@]}"
+    do
+        jum=$(cat /var/log/xray/access.log | grep -w "$akun" | tail -n 500 | cut -d " " -f 3 | sed 's/tcp://g' | cut -d ":" -f 1 | grep -w "$ip" | sort | uniq)
+        if [[ "$jum" = "$ip" ]]; then
+            echo "$jum" >> /tmp/ipvmess.txt
+        else
+            echo "$ip" >> /tmp/other.txt
+        fi
+        jum2=$(cat /tmp/ipvmess.txt)
+        sed -i "/$jum2/d" /tmp/other.txt > /dev/null 2>&1
+    done
+    
+    jum=$(cat /tmp/ipvmess.txt)
+    if [[ -z "$jum" ]]; then
+        echo > /dev/null
+    else
+        # --- LOGIC FIX (Path Sinkron dengan addws) ---
+        
+        # 1. Cek Limit IP (/etc/kyt/limit/vmess/ip)
+        if [[ -e /etc/kyt/limit/vmess/ip/${akun} ]]; then
+            iplimit=$(cat /etc/kyt/limit/vmess/ip/${akun})
+        else
+            iplimit="Unlimited"
+        fi
+
+        # Hitung Login IP saat ini
+        jum2=$(cat /tmp/ipvmess.txt | wc -l)
+        # Warna peringatan jika login melebihi limit
+        if [[ "$iplimit" != "Unlimited" && "$jum2" -gt "$iplimit" ]]; then
+            status_ip="${RED}${jum2}/${iplimit} (OVER)${NC}"
+        else
+            status_ip="${GREEN}${jum2}${NC} / ${GREEN}${iplimit}${NC}"
+        fi
+
+        # 2. Cek Limit Quota
+        if [[ -e /etc/vmess/${akun} ]]; then
+            byte=$(cat /etc/vmess/${akun})
+            lim=$(con ${byte})
+        else
+            lim="Unlimited"
+        fi
+
+        # 3. Cek Usage Quota
+        if [[ -e /etc/limit/vmess/${akun} ]]; then
+            wey=$(cat /etc/limit/vmess/${akun})
+            gb=$(con ${wey})
+        else
+            gb="0B"
+        fi
+
+        lastlogin=$(cat /var/log/xray/access.log | grep -w "$akun" | tail -n 500 | cut -d " " -f 2 | tail -1)
+        
+        # --- TAMPILAN KEREN BERGRADASI ---
+        # Bingkai atas dipipe ke lolcat
+        echo -e " ╭──────────────────────────────────────╮" | lolcat
+        
+        # Isi data menggunakan printf dengan warna manual agar rapi
+        # Format: Label (Gold) : Value (White/Green)
+        printf " │ %-13s %-22s │\n" "$(echo -e "${GOLD}User${NC}")" "$(echo -e "${WHITE}${akun}${NC}")"
+        printf " │ %-13s %-22s │\n" "$(echo -e "${GOLD}Login Time${NC}")" "$(echo -e "${CYAN}${lastlogin}${NC}")"
+        printf " │ %-13s %-22s │\n" "$(echo -e "${GOLD}Usage${NC}")" "$(echo -e "${RED}${gb}${NC} / ${GREEN}${lim}${NC}")"
+        printf " │ %-13s %-22s │\n" "$(echo -e "${GOLD}IP Login${NC}")" "$(echo -e "${status_ip}")"
+        
+        # Bingkai bawah dipipe ke lolcat
+        echo -e " ╰──────────────────────────────────────╯" | lolcat
+    fi
+    rm -rf /tmp/ipvmess.txt
 done
 rm -rf /tmp/other.txt
 echo ""
-echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | lolcat
 echo ""

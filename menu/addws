@@ -61,6 +61,7 @@ checking_sc() {
     echo -e "     \033[0;33mBuy access permissions for scripts${NC}"
     echo -e "             \033[0;33mContact Admin :${NC}"
     echo -e "      ${GREEN}TELEGRAM${NC} https://t.me/hokagelegend1"
+	echo -e "      ${GREEN}WHATS APP ${NC} 087726917005"
     echo -e "\033[1;93m────────────────────────────────────────────\033[0m"
     exit 0
   fi
@@ -253,7 +254,8 @@ if [ ! -e /etc/vmess ]; then
 fi
 
 if [[ $iplimit -gt 0 ]]; then
-echo -e "$iplimit" > /etc/vmess/${user}IP
+mkdir -p /etc/kyt/limit/vmess/ip
+echo -e "$iplimit" > /etc/kyt/limit/vmess/ip/$user
 else
 echo > /dev/null
 fi

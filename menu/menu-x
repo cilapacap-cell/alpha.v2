@@ -131,6 +131,7 @@ echo -e "   ${z}$NC [${f}04${NC}]$grenbo MENU RESTART SERVICE$NC${z}$NC [${f}11$
 echo -e "   ${z}$NC [${f}05${NC}]$grenbo MENU BOT TELEGRAM$NC ${z} $NC  [${f}12${NC}]$purple UPDATE SCRIPT$NC"
 echo -e "   ${z}$NC [${f}06${NC}]$grenbo CHANGE BANNER$NC    ${z} $NC   [${f}13${NC}]$purple FIX CERT SSL$NC"
 echo -e "   ${z}$NC [${f}07${NC}]$grenbo INFO PORT$NC         ${z} $NC  [${f}14${NC}]$purple INSTALL UDP$NC"
+echo -e "   ${z}$NC [${f}15${NC}]$grenbo DOWNGRADE X-RAY BERSI 2.1.0$NC         ${z} $NC  [${f}$NC"
 echo -e " ${YELL}╰══════════════════════════════════════════════════╯${NC}"
 echo -e "   ${y} ════════════════════════════════════════════"
 echo -e "   ${r} PILIH MENU DENGAN CARA KETIK 1/14 LALU ENTER $NC"
@@ -279,6 +280,13 @@ fi
 ##########
 clear
 wget --load-cookies /tmp/cookies.txt ${UDPX} -O install-udp && rm -rf /tmp/cookies.txt && chmod +x install-udp && ./install-udp
+;;
+15)
+clear
+rm xray-downgrade
+wget -q https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/menu/xray-downgrade
+chmod +x xray-downgrade
+./xray-downgrade
 ;;
 0 | 00)
 exit

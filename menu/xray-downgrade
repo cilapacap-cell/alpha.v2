@@ -105,8 +105,27 @@ echo -e "\n${YELLOW}[6/7] Menjalankan service...${NC}"
 sudo systemctl start xray
 sudo systemctl enable xray
 
-# 10. Log
-echo -e "\n${YELLOW}[7/7] Menampilkan Log (Tekan CTRL+C untuk keluar)...${NC}"
+# 10. Log & Auto Return Menu
+echo -e "\n${YELLOW}[7/7] Menampilkan Status & Log...${NC}"
 echo -e "${BLUE}=====================================================${NC}"
-sleep 2
-sudo journalctl -u xray -f
+
+# Menampilkan status (Active: running)
+sudo systemctl status xray --no-pager
+echo -e "${BLUE}-----------------------------------------------------${NC}"
+echo -e "${CYAN}20 Baris Log Terakhir:${NC}"
+# Menampilkan snapshot log terakhir (bukan realtime -f agar script bisa lanjut)
+sudo journalctl -u xray -n 20 --no-pager
+
+echo -e "${BLUE}=====================================================${NC}"
+echo -e "${GREEN}Proses Downgrade Selesai.${NC}"
+echo -e ""
+
+# Timer Mundur 15 Detik
+for (( i=15; i>=1; i-- )); do
+    echo -ne "${YELLOW}Kembali ke menu otomatis dalam $i detik...${NC}\r"
+    sleep 1
+done
+
+echo -e "\n${CYAN}Membuka menu...${NC}"
+# Perintah untuk kembali ke menu (pastikan command 'menu' ada di VPS Anda)
+menu

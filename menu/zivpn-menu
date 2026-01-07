@@ -17,6 +17,11 @@ CYAN='\e[1;36m'
 NC='\e[0m'
 WH='\e[1;37m'
 
+# --- DATA BOT TELEGRAM ---
+CHATID=$(grep -E "^#bot# " "/etc/bot/.bot.db" | cut -d ' ' -f 3)
+KEY=$(grep -E "^#bot# " "/etc/bot/.bot.db" | cut -d ' ' -f 2)
+URL="https://api.telegram.org/bot$KEY/sendMessage"
+
 function restart_service() { systemctl restart "$SERVICE_NAME"; }
 function header() {
     clear
@@ -56,16 +61,47 @@ function add_user() {
     domain=$(cat /etc/xray/domain 2>/dev/null)
     [ -z "$domain" ] && domain=$(curl -s ipv4.icanhazip.com)
     IP=$(curl -s ipv4.icanhazip.com)
+    ISP=$(cat /root/.info/.isp)
+    CITY=$(cat /root/.info/.city)
     
     # Get Port ZiVPN
     PORT=$(grep -o '"listen": *"[^"]*"' $CONFIG_FILE | cut -d'"' -f4 | sed 's/://g' | sed 's/0.0.0.0//g')
     [ -z "$PORT" ] && PORT="5667"
 
-    # Save ke Database (Sekarang menyimpan IP Limit juga)
+    # Save ke Database
     jq --arg user "$username" '.auth.config += [$user]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     jq --arg u "$username" --arg e "$exp_date" --arg q "$quota" --arg i "$iplimit" '.[$u] = {exp: $e, quota: $q, ip: $i}' "$USER_DB" > "${USER_DB}.tmp" && mv "${USER_DB}.tmp" "$USER_DB"
     
     restart_service
+
+    # --- KIRIM NOTIFIKASI TELEGRAM ---
+    TEXT="
+<code>☉——————————————————————————☉</code>
+<code>☘️Success Create ZiVPN☘️</code>
+<code>☉——————————————————————————☉</code>
+<code>Username         : </code> <code>$username</code>
+<code>Password         : </code> <code>$password</code>
+<code>Expired          : </code> <code>$exp_date</code>
+<code>Limit Ip         : </code> <code>$iplimit</code>
+<code>Limit Quota      : </code> <code>$quota</code>
+<code>☉——————————————————————————☉</code>
+<code>Host             : </code> <code>$domain</code>
+<code>IP               : $IP</code>
+<code>ISP              : $ISP</code>
+<code>CITY             : $CITY</code>
+<code>Port ZiVPN UDP   : $PORT </code>
+<code>Port UDP Custom  : 1-65535 </code>
+<code>☉——————————————————————————☉</code>
+<code>ZiVPN UDP    : </code>
+<code>$domain:$PORT@$username:$password</code>
+<code>☉——————————————————————————☉</code>
+<code>Payload WSS      : </code><code>GET wss://BUG.COM/ HTTP/1.1[crlf]Host: $domain[crlf]Upgrade: websocket[crlf][crlf]</code>
+<code>☉——————————————————————————☉</code>
+Aktif Selama         : $masa_aktif Hari
+Berakhir Pada        : $exp_date
+<code>☉——————————————————————————☉</code>
+"
+    curl -s --max-time 10 -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
     
     # --- OUTPUT HASIL ---
     clear
@@ -94,21 +130,16 @@ function add_user() {
 
 function list_users() {
     header
-    # Menampilkan Kolom Limit IP
     echo -e "No   Username        Expired         Quota      Limit IP   Status"
     echo -e "${BLUE}-----------------------------------------------------------------${NC}"
     
     no=1
-    # Loop Array User
     users=($(jq -r '.auth.config[]' "$CONFIG_FILE"))
     
     for user in "${users[@]}"; do
-        # Ambil data dari DB
         exp=$(jq -r --arg u "$user" '.[$u].exp // "Unknown"' "$USER_DB")
         quota=$(jq -r --arg u "$user" '.[$u].quota // "Unlimited"' "$USER_DB")
         iplimit=$(jq -r --arg u "$user" '.[$u].ip // "Unlimited"' "$USER_DB")
-        
-        # Format Printf
         printf "%-4s %-15s %-15s %-10s %-10s %s\n" "$no" "$user" "$exp" "$quota" "$iplimit" "ACTIVE"
         ((no++))
     done
@@ -159,6 +190,19 @@ function delete_user() {
 
     if [[ -n "$target_user" ]]; then
         echo -e "\nMenghapus user: ${RED}$target_user${NC}..."
+        
+        # --- KIRIM NOTIFIKASI TELEGRAM (DELETE) ---
+        TEXT="
+<code>☉——————————————————————————☉</code>
+<code>❌ Delete ZiVPN Account ❌</code>
+<code>☉——————————————————————————☉</code>
+<code>Username  : </code> <code>$target_user</code>
+<code>Status    : </code> <code>DELETED</code>
+<code>☉——————————————————————————☉</code>
+"
+        curl -s --max-time 10 -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
+
+        # Proses Hapus
         jq --arg u "$target_user" '.auth.config -= [$u]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
         jq --arg u "$target_user" 'del(.[$u])' "$USER_DB" > "${USER_DB}.tmp" && mv "${USER_DB}.tmp" "$USER_DB"
         restart_service

@@ -47,6 +47,10 @@ function add_user() {
     read -p " » Quota (GB) : " quota
     [ -z "$quota" ] && quota="Unlimited"
 
+    # --- TAMBAHAN LIMIT IP ---
+    read -p " » Limit IP (Device) : " iplimit
+    [ -z "$iplimit" ] && iplimit="Unlimited"
+
     # --- Logic System ---
     exp_date=$(date -d "+$masa_aktif days" +%Y-%m-%d)
     domain=$(cat /etc/xray/domain 2>/dev/null)
@@ -57,9 +61,9 @@ function add_user() {
     PORT=$(grep -o '"listen": *"[^"]*"' $CONFIG_FILE | cut -d'"' -f4 | sed 's/://g' | sed 's/0.0.0.0//g')
     [ -z "$PORT" ] && PORT="5667"
 
-    # Save ke Database
+    # Save ke Database (Sekarang menyimpan IP Limit juga)
     jq --arg user "$username" '.auth.config += [$user]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    jq --arg u "$username" --arg e "$exp_date" --arg q "$quota" '.[$u] = {exp: $e, quota: $q}' "$USER_DB" > "${USER_DB}.tmp" && mv "${USER_DB}.tmp" "$USER_DB"
+    jq --arg u "$username" --arg e "$exp_date" --arg q "$quota" --arg i "$iplimit" '.[$u] = {exp: $e, quota: $q, ip: $i}' "$USER_DB" > "${USER_DB}.tmp" && mv "${USER_DB}.tmp" "$USER_DB"
     
     restart_service
     
@@ -74,6 +78,7 @@ function add_user() {
     echo -e "➤ Password  : $password"
     echo -e "➤ Expired   : $exp_date"
     echo -e "➤ Quota     : $quota GB"
+    echo -e "➤ Limit IP  : $iplimit Device"
     echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo -e "➤ Port UDP  : $PORT"
     echo -e "➤ UDP Custom: 1-65535 (All Port)"
@@ -89,24 +94,25 @@ function add_user() {
 
 function list_users() {
     header
-    # PERBAIKAN: Menambahkan kolom Quota dan merapikan jarak
-    echo -e "No   Username        Expired         Quota      Status"
-    echo -e "${BLUE}------------------------------------------------------${NC}"
+    # Menampilkan Kolom Limit IP
+    echo -e "No   Username        Expired         Quota      Limit IP   Status"
+    echo -e "${BLUE}-----------------------------------------------------------------${NC}"
     
     no=1
     # Loop Array User
     users=($(jq -r '.auth.config[]' "$CONFIG_FILE"))
     
     for user in "${users[@]}"; do
-        # Ambil data dari DB. Jika user lama (tidak ada di db), set Unknown/Unlimited
+        # Ambil data dari DB
         exp=$(jq -r --arg u "$user" '.[$u].exp // "Unknown"' "$USER_DB")
         quota=$(jq -r --arg u "$user" '.[$u].quota // "Unlimited"' "$USER_DB")
+        iplimit=$(jq -r --arg u "$user" '.[$u].ip // "Unlimited"' "$USER_DB")
         
-        # Format Printf agar rapi sejajar
-        printf "%-4s %-15s %-15s %-10s %s\n" "$no" "$user" "$exp" "$quota" "ACTIVE"
+        # Format Printf
+        printf "%-4s %-15s %-15s %-10s %-10s %s\n" "$no" "$user" "$exp" "$quota" "$iplimit" "ACTIVE"
         ((no++))
     done
-    echo -e "${BLUE}------------------------------------------------------${NC}"
+    echo -e "${BLUE}-----------------------------------------------------------------${NC}"
     read -n 1 -s -r -p "Tekan Enter..."
 }
 

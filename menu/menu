@@ -14,6 +14,7 @@ green='\033[0;32m'
 grenbo="\e[92;1m"
 purple="\033[1;95m"
 YELL='\033[0;33m'
+
 #INTALLER-UDP
 UDPX="https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1S3IE25v_fyUfCLslnujFBSBMNunDHDk2' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1S3IE25v_fyUfCLslnujFBSBMNunDHDk2"
 ISP=$(cat /root/.info/.isp)
@@ -56,7 +57,7 @@ DATE=$(date +'%Y-%m-%d')
 datediff() {
     d1=$(date -d "$1" +%s)
     d2=$(date -d "$2" +%s)
-    echo -e "$COLOR1 $NC Expiry In   : $(( (d1 - d2) / 86400 )) Days"
+    echo -e "$COLOR1 $NC Expiry In    : $(( (d1 - d2) / 86400 )) Days"
 }
 mai="datediff "$Exp" "$DATE""
 
@@ -97,6 +98,9 @@ dropbear_service=$(/etc/init.d/dropbear status | grep Active | awk '{print $3}' 
 haproxy_service=$(systemctl status haproxy | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 xray_service=$(systemctl status xray | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 nginx_service=$(systemctl status nginx | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+# --- TAMBAHAN CEK STATUS ZIVPN ---
+zivpn_service=$(systemctl status zivpn | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
+
 #Status | Geo Project
 clear
 # STATUS SERVICE  SSH 
@@ -141,6 +145,14 @@ if [[ $dropbear_service == "running" ]]; then
 else
    status_dropbear="${RED}🔴${NC} "
 fi
+
+# --- LOGIKA STATUS ZIVPN ---
+if [[ $zivpn_service == "running" ]]; then 
+   status_zivpn="${green}ON🟢${NC}"
+else
+   status_zivpn="${RED}🔴${NC} "
+fi
+
 #####INFOAKUN
 vlx=$(grep -c -E "^#& " "/etc/xray/config.json")
 let vla=$vlx/2
@@ -161,50 +173,52 @@ a=" ${CYAN}ACCOUNT PREMIUM"
 #clear
 echo -e " "
 echo -e " ${z}╭══════════════════════════════════════════════════════════╮${NC}"
-echo -e " ${z}│$NC${f}    WELCOME TO  HOKAGE LEGEND STORE AUTOSCRIPT PREMIUM      $NC${z}│$NC"
+echo -e " ${z}│$NC${f}    WELCOME TO  HOKAGE LEGEND STORE AUTOSCRIPT PREMIUM    $NC${z}│$NC"
 echo -e " ${z}╰══════════════════════════════════════════════════════════╯${NC}"
 echo -e " ${z}══════════════════════════════════════════════════════════${NC}"
-echo -e " ${z}$NC$r ⇲ $NC$y System OS ${NC}     $Blue=$NC $MODEL${NC}"
-echo -e " ${z}$NC$r ⇲ $NC$y ISP ${NC}           $Blue=$NC $ISP${NC}"
-echo -e " ${z}$NC$r ⇲ $NC$y CITY ${NC}          $Blue=$NC $CITY${NC}"
-echo -e " ${z}$NC$r ⇲ $NC$y Server RAM ${NC}    $Blue=$NC $tram MB $NC"
-echo -e " ${z}$NC$r ⇲ $NC$y Core Cpu ${NC}      $Blue=$NC $CORE${NC}" CPU
+echo -e " ${z}$NC$r ⇲ $NC$y System OS ${NC}      $Blue=$NC $MODEL${NC}"
+echo -e " ${z}$NC$r ⇲ $NC$y ISP ${NC}            $Blue=$NC $ISP${NC}"
+echo -e " ${z}$NC$r ⇲ $NC$y CITY ${NC}           $Blue=$NC $CITY${NC}"
+echo -e " ${z}$NC$r ⇲ $NC$y Server RAM ${NC}     $Blue=$NC $tram MB $NC"
+echo -e " ${z}$NC$r ⇲ $NC$y Core Cpu ${NC}       $Blue=$NC $CORE${NC}" CPU
 echo -e " ${z}$NC$r ⇲ $NC$y Uptime Server ${NC} $Blue=$NC $SERONLINE${NC}"
-echo -e " ${z}$NC$r ⇲ $NC$y Date ${NC}          $Blue=$NC $DATEVPS${NC}"
-echo -e " ${z}$NC$r ⇲ $NC$y Time ${NC}          $Blue=$NC $TIMEZONE${NC}"
-echo -e " ${z}$NC$r ⇲ $NC$y Domain ${NC}        $Blue=$NC $domain${NC}"
+echo -e " ${z}$NC$r ⇲ $NC$y Date ${NC}           $Blue=$NC $DATEVPS${NC}"
+echo -e " ${z}$NC$r ⇲ $NC$y Time ${NC}           $Blue=$NC $TIMEZONE${NC}"
+echo -e " ${z}$NC$r ⇲ $NC$y Domain ${NC}         $Blue=$NC $domain${NC}"
 echo -e " ${z}══════════════════════════════════════════════════════════${NC}"
-echo -e "            ${KIRI} ${Blue}INFORMATION ACCOUNT ON VPS${NC} ${KANAN}"
-echo -e "          ${NC}┌─────────────────────────────────────┐${NC}"
+echo -e "             ${KIRI} ${Blue}INFORMATION ACCOUNT ON VPS${NC} ${KANAN}"
+echo -e "           ${NC}┌─────────────────────────────────────┐${NC}"
 echo -e "                 ${CYAN}ACCOUNT SSH/OVPN/UDP${NC}   $y=$NC $ssh1${NC}"
 echo -e "                 ${CYAN}ACCOUNT VMESS/WS/GRPC${NC}  $y=$NC $vma$NC"
 echo -e "                 ${CYAN}ACCOUNT VLESS/WS/GRPC${NC}  $y=$NC $vla$NC" 
 echo -e "                 ${CYAN}ACCOUNT TROJAN/WS/GRPC${NC} $y=$NC $trb${NC}"
 echo -e "                 ${CYAN}ACCOUNT SHADOW/WS/GRPC${NC} $y=$NC $ssa${NC}"
-echo -e "          ${NC}└─────────────────────────────────────┘${NC}"
+echo -e "           ${NC}└─────────────────────────────────────┘${NC}"
 echo -e "               ${KIRI} ${RED} HOKAGE LEGEND STORE TUNNELING  ${NC} ${KANAN}"
 echo -e " ${z}╭════════════════╮╭══════════════════╮╭════════════════════╮${NC}"
-echo -e " ${z}│ ${NC}$y SSH$NC : $status_ssh" "       $y NGINX$NC : $status_nginx" "       $y XRAY$NC : $status_xray     $NC${z}│$NC" 
-echo -e " ${z}│ ${NC}$y WS-ePRO$NC : $status_ws_epro" "   $y DROPBEAR$NC : $status_dropbear" "    $y HAPROXY$NC : $status_haproxy  $NC${z}│$NC" 
+echo -e " ${z}│ ${NC}$y SSH$NC     : $status_ssh" "  $y NGINX$NC    : $status_nginx" "    $y XRAY$NC    : $status_xray   $NC${z}│$NC" 
+echo -e " ${z}│ ${NC}$y WS-ePRO$NC : $status_ws_epro" "$y   DROPBEAR$NC : $status_dropbear" "    $y HAPROXY$NC : $status_haproxy   $NC${z}│$NC" 
+echo -e " ${z}│ ${NC}$y ZiVPN$NC   : $status_zivpn" "                                         $NC${z}│$NC" 
 echo -e " ${z}╰════════════════╯╰══════════════════╯╰════════════════════╯${NC}"
-echo -e "            ${KIRI} ${Green}⇱ ALL FITUR SC TUNNELING ⇲${NC} ${KANAN}"
+echo -e "             ${KIRI} ${Green}⇱ ALL FITUR SC TUNNELING ⇲${NC} ${KANAN}"
 echo -e "    ${z}══════════════════════════════════════════════════════${NC}"
-echo -e "           ${z}$NC [${r}01${NC}]$green MENU SSH$NC     ${z}│$NC [${r}05${NC}]$green MENU SSWS$NC  ${z}$NC"
-echo -e "           ${z}$NC [${r}02${NC}]$green MENU VMESS$NC   ${z}│$NC [${r}06${NC}]$green MENU NOOBZVPN$NC ${z}$NC"
-echo -e "           ${z}$NC [${r}03${NC}]$green MENU VLESS$NC   ${z}│$NC [${r}07${NC}]$green SPEEDTEST$NC ${z} $NC"
-echo -e "           ${z}$NC [${r}04${NC}]$green MENU TROJAN$NC  ${z}│$NC [${r}08${NC}]$green MENU UTILITY$NC ${z} $NC"
+echo -e "            ${z}$NC [${r}01${NC}]$green MENU SSH$NC      ${z}│$NC [${r}05${NC}]$green MENU SSWS$NC   ${z}$NC"
+echo -e "            ${z}$NC [${r}02${NC}]$green MENU VMESS$NC    ${z}│$NC [${r}06${NC}]$green MENU NOOBZVPN$NC ${z}$NC"
+echo -e "            ${z}$NC [${r}03${NC}]$green MENU VLESS$NC    ${z}│$NC [${r}07${NC}]$green SPEEDTEST$NC  ${z} $NC"
+echo -e "            ${z}$NC [${r}04${NC}]$green MENU TROJAN$NC   ${z}│$NC [${r}08${NC}]$green MENU UTILITY$NC  ${z} $NC"
+echo -e "            ${z}$NC [${r}09${NC}]$green MENU ZIVPN$NC    ${z}│$NC                       ${z} $NC"
 echo -e "    ${z}══════════════════════════════════════════════════════${NC}"
-echo -e "            ${KIRI}${z} INFORMATION YOUR ACTIVE PERIOD ${z}${KANAN}"
+echo -e "             ${KIRI}${z} INFORMATION YOUR ACTIVE PERIOD ${z}${KANAN}"
 echo -e " ${z}╭══════════════════════════════════════════════════════════╮${NC}"
-echo -e " ${z}│$NC${z} Developer$NC  ${z}=$NC HOKAGE LEGEND STORE"
-echo -e " ${z}│$NC${z} Telegram$NC   ${z}=$NC https://t.me/hokagelegend1"
-echo -e " ${z}│$NC${z} IP ADDRESS ${z}=$NC $IPVPS${NC}"
-echo -e " ${z}│$NC${z} User$NC       ${z}=$NC $username"
-echo -e " ${z}│$NC${z} Exp Script$NC ${z}=$NC $exp $certifacate Days$NC $sts"
+echo -e " ${z}    $NC${z} Developer$NC  ${z} =$NC HOKAGE LEGEND STORE"
+echo -e " ${z}    $NC${z} Telegram$NC   ${z} =$NC https://t.me/hokagelegend1"
+echo -e " ${z}    $NC${z} IP ADDRESS ${z} =$NC $IPVPS${NC}"
+echo -e " ${z}    $NC${z} User$NC       ${z} =$NC $username"
+echo -e " ${z}    $NC${z} Exp Script$NC ${z} =$NC $exp $certifacate Days$NC $sts"
 echo -e " ${z}╰══════════════════════════════════════════════════════════╯${NC}"
-echo -e "     ${KIRI}${z}THANKS YOU FOR USING SCRIPT HOKAGE LEGEND${z}${KANAN}"
+echo -e "     ${KIRI}\033[5m\033[35mTHANKS YOU FOR \033[34mUSING SCRIPT \033[31mHOKAGE LEGEND\033[0m${KANAN}"
 echo -e ""
-read -p " PILIH MENU DENGAN CARA KETIK 1/8 : " opt
+read -p " PILIH MENU DENGAN CARA KETIK 1/9 : " opt
 echo -e ""
 case $opt in
 1 | 01)
@@ -235,14 +249,13 @@ m-noob
 clear
 speedtest
 ;;
-7 | 07)
-clear
-speedtest
-menu
-;;
 8 | 08)
 clear
 menu-x
+;;
+9 | 09)
+clear
+zivpn-menu
 ;;
 0 | 00)
 exit

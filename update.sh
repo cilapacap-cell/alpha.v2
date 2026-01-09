@@ -68,7 +68,7 @@ res1() {
     rm -rf menu.zip
     
     # 4. Download Menu Utama Spesifik
-    rm /usr/local/sbin/menu
+    rm -rf /usr/local/sbin/menu
     wget -q -O menu https://raw.githubusercontent.com/hokagelegend9999/alpha.v2/refs/heads/main/menu/menu
     mv menu /usr/local/sbin/
     chmod +x /usr/local/sbin/menu

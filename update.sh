@@ -78,12 +78,24 @@ res1() {
     # Ini membersihkan semua script di sbin dari error ^M
     sed -i 's/\r$//' /usr/local/sbin/*
 
-    # 6. Setup Cronjob
+    # 6. Setup Cronjob SSH Accountant
     cat >/etc/cron.d/ssh_accountant <<-END
     SHELL=/bin/sh
     PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
     * * * * * root /usr/local/sbin/ssh-accountant
 END
+
+    # 7. Setup Cronjob Limit Quota (SAFE MODE - 10 Menit)
+    # Menghapus jadwal lama yang bikin berat
+    rm -f /etc/cron.d/limit_quota
+    sed -i "/limit-quota/d" /etc/crontab
+    
+    # Membuat jadwal baru yang aman (tiap 10 menit)
+    cat >/etc/cron.d/limit_quota <<-EOF
+    SHELL=/bin/sh
+    PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+    */10 * * * * root /usr/local/sbin/limit-quota
+EOF
 
     # Restart service cron agar efek berjalan
     service cron restart

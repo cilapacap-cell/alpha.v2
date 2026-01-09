@@ -5,9 +5,15 @@ domain=$(cat /etc/xray/domain)
 #color
 grenbo="\e[92;1m"
 NC='\e[0m'
-#install
-apt update && apt upgrade
-apt install python3 python3-pip git
+
+#install packages
+echo -e "${grenbo}Installing Dependencies...${NC}"
+apt update && apt upgrade -y
+apt install python3 python3-pip git -y
+
+# Bersihkan speedtest lama jika ada (biar tidak bentrok)
+apt-get remove speedtest-cli -y > /dev/null 2>&1
+
 cd /usr/bin
 wget https://raw.githubusercontent.com/hokagelegend9999/alpha.v2/refs/heads/main/bot/bot.zip
 unzip bot.zip
@@ -15,15 +21,22 @@ mv bot/* /usr/bin
 chmod +x /usr/bin/*
 rm -rf bot.zip
 clear
+
 wget https://raw.githubusercontent.com/hokagelegend9999/alpha.v2/refs/heads/main/bot/kyt.zip
 unzip kyt.zip
+
+# --- UPDATE PENTING DISINI ---
+# Install modules bawaan
 pip3 install -r kyt/requirements.txt
+# Install module Speedtest Python (Wajib untuk fitur speedtest baru)
+pip3 install speedtest-cli requests
+
 chmod +x /usr/bin/kyt/shell/bot/*
 
 clear
 echo ""
 echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e " \e[1;97;101m          ADD BOT PANEL          \e[0m"
+echo -e " \e[1;97;101m          ADD BOT PANEL           \e[0m"
 echo -e "\033[1;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
 echo -e "${grenbo}Tutorial Creat Bot and ID Telegram${NC}"
 echo -e "${grenbo}[*] Creat Bot and Token Bot : @BotFather${NC}"

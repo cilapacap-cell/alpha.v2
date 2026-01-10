@@ -98,6 +98,9 @@ res1() {
     rm -f shell.zip
     chmod +x -R /usr/bin/kyt/shell/
     chmod +x -R /usr/bin/kyt/modules/
+    sed -i 's/\r$//' /usr/bin/kyt/shell/bot/bot-vless-detail
+    sed -i 's/\r$//' /usr/bin/kyt/shell/bot/bot-vmess-detail
+    sed -i 's/\r$//' /usr/bin/kyt/shell/bot/bot-trojan-detail
     # --- 3. RESTART SERVICE ---
     systemctl enable kyt
     systemctl restart kyt

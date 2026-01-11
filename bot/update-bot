@@ -105,6 +105,8 @@ res1() {
     # --- 3. RESTART SERVICE ---
     systemctl enable kyt
     systemctl restart kyt
+    chmod +x -R /usr/bin/kyt/shell/
+    chmod +x -R /usr/bin/kyt/modules/
 }
 
 # ==================================================

@@ -51,8 +51,89 @@ print_gradient() {
         printf "\033[0m\n";
     }'
 }
-# ==================================================
+# ==========================================
+#  FUNGSI SPEEDTEST V4 (FIXED LOADING LEAK)
+# ==========================================
+function run_speedtest_cool() {
+    # Definisi Warna (Gunakan \e agar lebih universal di bash)
+    local CYAN='\e[0;36m'
+    local GREEN='\e[0;32m'
+    local RED='\e[0;31m'
+    local YELLOW='\e[1;33m'
+    local BLUE='\e[0;34m'
+    local PURPLE='\e[0;35m'
+    local BOLD='\e[1m'
+    local WHITE='\e[1;37m'
+    local NC='\e[0m'
 
+    # Hapus file lama
+    rm -f /tmp/speedtest.txt
+
+    # Header Judul
+    echo -e ""
+    echo -e " ${CYAN}┌──────────────────────────────────────────┐${NC}"
+    echo -e " ${CYAN}│${NC}      ${BOLD}${YELLOW}SPEEDTEST BY HOKAGE LEGEND${NC}          ${CYAN}│${NC}"
+    echo -e " ${CYAN}└──────────────────────────────────────────┘${NC}"
+    echo -e ""
+
+    # --- ANIMASI LOADING (PERBAIKAN DISINI) ---
+    # Kita gunakan %b untuk warna agar tidak bocor jadi teks
+    (
+        while :; do
+            for s in / - \\ \|; do
+                printf "\r ${CYAN}[${YELLOW} PROCESS ${CYAN}]${NC} ${BOLD}Sedang mengukur... %b%s%b" "${PURPLE}" "$s" "${NC}" 
+                sleep 0.1
+            done
+        done
+    ) &
+    SPIN_PID=$!
+
+    # --- JALANKAN SPEEDTEST ---
+    # Redirect stderr ke null agar error text tidak merusak tampilan
+    speedtest-cli --simple --secure > /tmp/speedtest.txt 2> /dev/null
+
+    # --- MATIKAN ANIMASI ---
+    kill $SPIN_PID 2>/dev/null
+    wait $SPIN_PID 2>/dev/null
+    # Bersihkan baris loading sampai bersih
+    printf "\r%s\r" "                                                   "
+
+    # --- AMBIL DATA ---
+    if [[ ! -s /tmp/speedtest.txt ]]; then
+        echo -e " ${RED}[ ERROR ]${NC} Gagal/Timeout. Cek koneksi internet."
+    else
+        # Parsing Data
+        PING=$(cat /tmp/speedtest.txt | grep "Ping" | awk '{print $2}')
+        UNIT_PING=$(cat /tmp/speedtest.txt | grep "Ping" | awk '{print $3}')
+        
+        DOWN=$(cat /tmp/speedtest.txt | grep "Download" | awk '{print $2}')
+        UNIT_DOWN=$(cat /tmp/speedtest.txt | grep "Download" | awk '{print $3}')
+        
+        UP=$(cat /tmp/speedtest.txt | grep "Upload" | awk '{print $2}')
+        UNIT_UP=$(cat /tmp/speedtest.txt | grep "Upload" | awk '{print $3}')
+
+        # --- TAMPILAN HASIL ---
+        local HR="════════════════════════════════════════"
+
+        echo -e " ${CYAN}╔${HR}╗${NC}"
+        printf " ${CYAN}║${NC}${BOLD}${GREEN}%-40s${NC}${CYAN}║${NC}\n" "              RESULT DATA"
+        echo -e " ${CYAN}╠${HR}╣${NC}"
+        
+        printf " ${CYAN}║${NC}  ${BOLD}%-9s %-15s %-12s${NC} ${CYAN}║${NC}\n" "TIPE" "VALUE" "UNIT"
+        
+        echo -e " ${CYAN}╠${HR}╣${NC}"
+        
+        printf " ${CYAN}║${NC}  ${PURPLE}%-9s${NC} ${WHITE}%-15s${NC} ${YELLOW}%-12s${NC} ${CYAN}║${NC}\n" "LATENCY" "$PING" "$UNIT_PING"
+        printf " ${CYAN}║${NC}  ${GREEN}%-9s${NC} ${WHITE}%-15s${NC} ${YELLOW}%-12s${NC} ${CYAN}║${NC}\n" "DOWNLOAD" "$DOWN" "$UNIT_DOWN"
+        printf " ${CYAN}║${NC}  ${BLUE}%-9s${NC} ${WHITE}%-15s${NC} ${YELLOW}%-12s${NC} ${CYAN}║${NC}\n" "UPLOAD" "$UP" "$UNIT_UP"
+        
+        echo -e " ${CYAN}╚${HR}╝${NC}"
+    fi
+    
+    rm -f /tmp/speedtest.txt
+    echo -e ""
+    read -n 1 -s -r -p "Press any key to back..."
+}
 # SYSTEM INFO GATHERING
 # Mengambil data IP dan ISP sekali saja untuk mempercepat loading
 IPVPS=$(curl -s ipv4.icanhazip.com)
@@ -205,7 +286,7 @@ case $opt in
 4 | 04) clear ; m-trojan ;;
 5 | 05) clear ; m-ssws ;;
 6 | 06) clear ; m-trial ;;
-7 | 07) clear ; speedtest ;;
+7 | 07) clear ; run_speedtest_cool ; menu ;;
 8 | 08) clear ; menu-x ;;
 9 | 09) clear ; zivpn-menu ;;
 10 | 10) clear ; cek-vps ;;

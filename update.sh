@@ -57,9 +57,10 @@ res1() {
     rm -rf fv-tunnel
     
     # 2. Bersihkan Folder sbin
+    # Hati-hati, ini menghapus semua. Pastikan zip lengkap.
     rm -rf /usr/local/sbin/*
     
-    # 3. Download & Pasang Menu Baru
+    # 3. Download & Pasang Menu Baru (Termasuk xp-zivpn)
     wget https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/menu/menu.zip
     unzip -o menu.zip > /dev/null 2>&1
     chmod +x menu/*
@@ -67,16 +68,22 @@ res1() {
     rm -rf menu
     rm -rf menu.zip
     
-    # 4. Download Menu Utama Spesifik
+    # 4. Download Menu Utama Spesifik (Overwrite jika perlu)
     rm -rf /usr/local/sbin/menu
     wget -q -O menu https://raw.githubusercontent.com/hokagelegend9999/alpha.v2/refs/heads/main/menu/menu
     mv menu /usr/local/sbin/
     chmod +x /usr/local/sbin/menu
+    
+    # Buat folder usage jika belum ada
+    mkdir -p /etc/ssh/usage_db/
     chmod +x /etc/ssh/usage_db/
     
     # 5. FIX WINDOWS LINE ENDING (PENTING)
-    # Ini membersihkan semua script di sbin dari error ^M
+    # Membersihkan karakter ^M pada semua file script
     sed -i 's/\r$//' /usr/local/sbin/*
+    
+    # Beri izin eksekusi spesifik untuk xp-zivpn
+    chmod +x /usr/local/sbin/xp-zivpn
 
     # 6. Setup Cronjob SSH Accountant
     cat >/etc/cron.d/ssh_accountant <<-END
@@ -85,12 +92,20 @@ res1() {
     * * * * * root /usr/local/sbin/ssh-accountant
 END
 
-    # 7. Setup Cronjob Limit Quota (SAFE MODE - 10 Menit)
-    # Menghapus jadwal lama yang bikin berat
+    # 7. Setup Cronjob XP-ZIVPN (Auto Expired & Sync) - JAM 00:00
+    # Ini yang paling penting untuk xp-zivpn
+    cat >/etc/cron.d/xp_zivpn <<-END
+    SHELL=/bin/sh
+    PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+    0 0 * * * root /usr/local/sbin/xp-zivpn
+END
+
+    # 8. Setup Cronjob Limit Quota (SAFE MODE - 10 Menit)
+    # Menghapus jadwal lama
     rm -f /etc/cron.d/limit_quota
     sed -i "/limit-quota/d" /etc/crontab
     
-    # Membuat jadwal baru yang aman (tiap 10 menit)
+    # Membuat jadwal baru (tiap 10 menit)
     cat >/etc/cron.d/limit_quota <<-EOF
     SHELL=/bin/sh
     PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin

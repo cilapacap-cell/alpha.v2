@@ -1,279 +1,130 @@
 #!/bin/bash
-# ==========================================
-#  ZIVPN MANAGER - HOKAGE LEGEND STYLE
-# ==========================================
+# ======================================================
+#   HOKAGE LEGEND ZIVPN MANAGER (SAFE MODE - NO AUTO DELETE)
+# ======================================================
 
+y='\033[1;33m'; z='\033[96m'; NC='\033[0m'; GREEN='\033[0;32m'
+RED='\033[0;31m'; PURPLE='\033[1;35m'; BLINK='\033[5m'
 CONFIG_FILE="/etc/zivpn/config.json"
 USER_DB="/etc/zivpn/user-db.json"
 SERVICE_NAME="zivpn.service"
+BACKUP_DIR="/root/backup/zivpn"
 
-# --- WARNA ---
-RED='\e[1;31m'
-GREEN='\e[1;32m'
-YELLOW='\e[1;33m'
-BLUE='\e[1;34m'
-PURPLE='\e[1;35m'
-CYAN='\e[1;36m'
-NC='\e[0m'
-WH='\e[1;37m'
-
-# --- DATA BOT TELEGRAM ---
-CHATID=$(grep -E "^#bot# " "/etc/bot/.bot.db" | cut -d ' ' -f 3)
-KEY=$(grep -E "^#bot# " "/etc/bot/.bot.db" | cut -d ' ' -f 2)
-URL="https://api.telegram.org/bot$KEY/sendMessage"
-
-function restart_service() { systemctl restart "$SERVICE_NAME"; }
-function header() {
-    clear
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${WH}      ⚡ ZIVPN PREMIUM MANAGER (ORIGINAL) ⚡       ${NC}"
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+print_gradient() {
+    echo -e "$1" 
 }
-
-function add_user() {
-    header
-    # --- Input Data ---
-    read -p " » Username : " username
-    [ -z "$username" ] && return
-    
-    # Cek Duplicate
-    if grep -q "$username" "$CONFIG_FILE"; then
-        echo -e "${RED}Error: Username sudah ada!${NC}"
-        sleep 2
-        return
-    fi
-    
-    read -p " » Password : " password
-    [ -z "$password" ] && password="$username" 
-    
-    read -p " » Expired (hari) : " masa_aktif
-    [ -z "$masa_aktif" ] && masa_aktif=30
-    
-    read -p " » Quota (GB) : " quota
-    [ -z "$quota" ] && quota="Unlimited"
-
-    # --- TAMBAHAN LIMIT IP ---
-    read -p " » Limit IP (Device) : " iplimit
-    [ -z "$iplimit" ] && iplimit="Unlimited"
-
-    # --- Logic System ---
-    exp_date=$(date -d "+$masa_aktif days" +%Y-%m-%d)
-    domain=$(cat /etc/xray/domain 2>/dev/null)
-    [ -z "$domain" ] && domain=$(curl -s ipv4.icanhazip.com)
-    IP=$(curl -s ipv4.icanhazip.com)
-    ISP=$(cat /root/.info/.isp)
-    CITY=$(cat /root/.info/.city)
-    
-    # Get Port ZiVPN
-    PORT=$(grep -o '"listen": *"[^"]*"' $CONFIG_FILE | cut -d'"' -f4 | sed 's/://g' | sed 's/0.0.0.0//g')
-    [ -z "$PORT" ] && PORT="5667"
-
-    # Save ke Database
-    jq --arg user "$username" '.auth.config += [$user]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    jq --arg u "$username" --arg e "$exp_date" --arg q "$quota" --arg i "$iplimit" '.[$u] = {exp: $e, quota: $q, ip: $i}' "$USER_DB" > "${USER_DB}.tmp" && mv "${USER_DB}.tmp" "$USER_DB"
-    
-    restart_service
-
-    # --- KIRIM NOTIFIKASI TELEGRAM ---
-    TEXT="
-<code>☉——————————————————————————☉</code>
-<code>☘️Success Create ZiVPN☘️</code>
-<code>☉——————————————————————————☉</code>
-<code>Username         : </code> <code>$username</code>
-<code>Password         : </code> <code>$password</code>
-<code>Expired          : </code> <code>$exp_date</code>
-<code>Limit Ip         : </code> <code>$iplimit</code>
-<code>Limit Quota      : </code> <code>$quota</code>
-<code>☉——————————————————————————☉</code>
-<code>Host             : </code> <code>$domain</code>
-<code>IP               : $IP</code>
-<code>ISP              : $ISP</code>
-<code>CITY             : $CITY</code>
-<code>Port ZiVPN UDP   : $PORT </code>
-<code>Port UDP Custom  : 1-65535 </code>
-<code>☉——————————————————————————☉</code>
-<code>ZiVPN UDP    : </code>
-<code>$domain:$PORT@$username:$password</code>
-<code>☉——————————————————————————☉</code>
-<code>Payload WSS      : </code><code>GET wss://BUG.COM/ HTTP/1.1[crlf]Host: $domain[crlf]Upgrade: websocket[crlf][crlf]</code>
-<code>☉——————————————————————————☉</code>
-Aktif Selama         : $masa_aktif Hari
-Berakhir Pada        : $exp_date
-<code>☉——————————————————————————☉</code>
-"
-    curl -s --max-time 10 -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
-    
-    # --- OUTPUT HASIL ---
-    clear
-    echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "🔵  ZIVPN PREMIUM ACCOUNT   🔵"
-    echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "➤ Domain    : $domain"
-    echo -e "➤ IP        : $IP"
-    echo -e "➤ Username  : $username"
-    echo -e "➤ Password  : $password"
-    echo -e "➤ Expired   : $exp_date"
-    echo -e "➤ Quota     : $quota GB"
-    echo -e "➤ Limit IP  : $iplimit Device"
-    echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "➤ Port UDP  : $PORT"
-    echo -e "➤ UDP Custom: 1-65535 (All Port)"
-    echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "CARA PAKAI      : "
-    echo -e "UDP SERVER    Isi Dengan       : $domain"
-    echo -e "UDP PASSWORD Isi dengan       : $username"
-    echo -e "\033[1;93m━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "    \033[5m\033[35mTHANKS YOU FOR \033[34mUSING SCRIPT \033[31mHOKAGE LEGEND\033[0m"
-    echo -e ""
-    read -n 1 -s -r -p "Press any key to back on menu"
+print_row() {
+    local label="$1"; local val_text="$2"
+    local val_clean=$(echo -e "$val_text" | sed "s/\x1b\[[0-9;]*m//g")
+    local len_val=${#val_clean}; local max_space=30
+    local pad_len=$(( max_space - len_val ))
+    if [[ $pad_len -lt 0 ]]; then pad_len=0; fi
+    local padding=""; for ((i=0; i<pad_len; i++)); do padding+=" "; done
+    echo -e " ${z}│${NC} ${y}$(printf "%-12s" "$label")${NC} : ${val_text}${padding}${z}│${NC}"
+}
+function restart_service() { systemctl restart "$SERVICE_NAME"; }
+function remove_user_data() {
+    local user=$1
+    jq --arg u "$user" '.auth.config -= [$u]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    jq --arg u "$user" 'del(.[$u])' "$USER_DB" > "${USER_DB}.tmp" && mv "${USER_DB}.tmp" "$USER_DB"
+    userdel -f "$user" &>/dev/null
+    rm -f /etc/kyt/limit/ssh/ip/$user
 }
 
 function list_users() {
-    header
-    echo -e "No   Username        Expired         Quota      Limit IP   Status"
-    echo -e "${BLUE}-----------------------------------------------------------------${NC}"
-    
-    no=1
+    clear
+    echo -e "\033[1;36m================================================\033[0m"
+    echo -e "           MONITOR USER (AMAN - NO DELETE)      "
+    echo -e "\033[1;36m================================================\033[0m"
     users=($(jq -r '.auth.config[]' "$CONFIG_FILE"))
-    
+    today_sec=$(date +%s); total_active=0
     for user in "${users[@]}"; do
+        if [[ "$user" == "zi" || -z "$user" ]]; then continue; fi
+        ((total_active++))
         exp=$(jq -r --arg u "$user" '.[$u].exp // "Unknown"' "$USER_DB")
         quota=$(jq -r --arg u "$user" '.[$u].quota // "Unlimited"' "$USER_DB")
-        iplimit=$(jq -r --arg u "$user" '.[$u].ip // "Unlimited"' "$USER_DB")
-        printf "%-4s %-15s %-15s %-10s %-10s %s\n" "$no" "$user" "$exp" "$quota" "$iplimit" "ACTIVE"
-        ((no++))
+        if [[ "$exp" != "Unknown" ]]; then
+            exp_sec=$(date -d "$exp" +%s 2>/dev/null)
+            d1=$(date -d "$exp" +%s); d2=$(date -d "$(date +%Y-%m-%d)" +%s)
+            sisa_hari=$(( (d1 - d2) / 86400 ))
+            if [[ "$sisa_hari" -lt 0 ]]; then
+                validity="${RED}EXPIRED (${sisa_hari} Hari)${NC}" # Cuma tampil merah
+            else
+                validity="${GREEN}${sisa_hari} Hari${NC}"
+            fi
+        else
+            validity="${GREEN}Unlimited${NC}"
+        fi
+        echo -e " ${z}╭──────────────────────────────────────────────╮${NC}"
+        print_row "User" "$user"
+        print_row "Expired" "$exp"
+        print_row "Sisa Waktu" "$validity"
+        echo -e " ${z}╰──────────────────────────────────────────────╯${NC}"
     done
-    echo -e "${BLUE}-----------------------------------------------------------------${NC}"
-    read -n 1 -s -r -p "Tekan Enter..."
+    echo -e ""
+    read -n 1 -s -r -p "Press any key to back..."
 }
 
-function delete_user() {
-    header
-    echo -e "${YELLOW}DAFTAR USER ZIVPN:${NC}"
-    echo -e "${BLUE}---------------------------------------------${NC}"
-    
-    users=($(jq -r '.auth.config[]' "$CONFIG_FILE"))
-    
-    if [ ${#users[@]} -eq 0 ]; then
-        echo -e "${RED}Tidak ada user yang terdaftar.${NC}"
-        sleep 2
-        return
-    fi
-
-    no=1
-    for user in "${users[@]}"; do
-        exp=$(jq -r --arg u "$user" '.[$u].exp // "Unknown"' "$USER_DB")
-        echo -e " ${GREEN}[$no]${NC} $user ${YELLOW}($exp)${NC}"
-        ((no++))
-    done
-    echo -e "${BLUE}---------------------------------------------${NC}"
-    echo -e "${YELLOW}[0] Batal / Kembali${NC}"
-    echo ""
-    read -p "Pilih Nomor atau Ketik Username untuk dihapus : " input
-
-    if [[ "$input" == "0" ]]; then return; fi
-
-    target_user=""
-    if [[ "$input" =~ ^[0-9]+$ ]]; then
-        index=$((input - 1))
-        if [[ $index -ge 0 && $index -lt ${#users[@]} ]]; then
-            target_user="${users[$index]}"
-        fi
-    else
-        for u in "${users[@]}"; do
-            if [[ "$u" == "$input" ]]; then
-                target_user="$u"
-                break
-            fi
-        done
-    fi
-
-    if [[ -n "$target_user" ]]; then
-        echo -e "\nMenghapus user: ${RED}$target_user${NC}..."
-        
-        # --- KIRIM NOTIFIKASI TELEGRAM (DELETE) ---
-        TEXT="
-<code>☉——————————————————————————☉</code>
-<code>❌ Delete ZiVPN Account ❌</code>
-<code>☉——————————————————————————☉</code>
-<code>Username  : </code> <code>$target_user</code>
-<code>Status    : </code> <code>DELETED</code>
-<code>☉——————————————————————————☉</code>
-"
-        curl -s --max-time 10 -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
-
-        # Proses Hapus
-        jq --arg u "$target_user" '.auth.config -= [$u]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-        jq --arg u "$target_user" 'del(.[$u])' "$USER_DB" > "${USER_DB}.tmp" && mv "${USER_DB}.tmp" "$USER_DB"
-        restart_service
-        echo -e "✅ User berhasil dihapus."
-    else
-        echo -e "${RED}User tidak ditemukan!${NC}"
-    fi
+# --- ADD USER ---
+function add_user() {
+    clear
+    echo -e "CREATE USER"; echo ""
+    read -p " Username    : " username
+    if grep -q "\"$username\"" "$CONFIG_FILE"; then echo "Exists!"; sleep 1; return; fi
+    read -p " Password    : " password
+    read -p " Expired (D) : " masa_aktif
+    [ -z "$password" ] && password="$username"; [ -z "$masa_aktif" ] && masa_aktif="30"
+    exp_date=$(date -d "+$masa_aktif days" +%Y-%m-%d)
+    useradd -e "$exp_date" -s /bin/false -M "$username"
+    echo -e "$password\n$password" | passwd "$username" &>/dev/null
+    jq --arg user "$username" '.auth.config += [$user]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    jq --arg u "$username" --arg e "$exp_date" \
+       '.[$u] = {exp: $e, quota: "Unlimited", ip: "Unlimited"}' "$USER_DB" > "${USER_DB}.tmp" && mv "${USER_DB}.tmp" "$USER_DB"
+    restart_service
+    echo -e "SUCCESS: $username created."
     sleep 2
 }
 
-function show_main_menu() {
-    header
-    PORT=$(grep -o '"listen": *"[^"]*"' $CONFIG_FILE | cut -d'"' -f4 | sed 's/://g' | sed 's/0.0.0.0//g')
-    [ -z "$PORT" ] && PORT="5667"
-    IP_VPS=$(curl -s --connect-timeout 2 ipv4.icanhazip.com)
-    STATUS_SRV=$(systemctl is-active "$SERVICE_NAME" | tr '[:lower:]' '[:upper:]')
-    [ "$STATUS_SRV" == "ACTIVE" ] && STATUS_SRV="${GREEN}RUNNING${NC}" || STATUS_SRV="${RED}STOPPED${NC}"
-    echo -e " ${PURPLE}» IP Server    :${WH} $IP_VPS"
-    echo -e " ${PURPLE}» Port UDP     :${WH} $PORT"
-    echo -e " ${PURPLE}» Status       :${WH} $STATUS_SRV"
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "  ${GREEN}[1]${NC} • Buat User Baru"
-    echo -e "  ${GREEN}[2]${NC} • List User"
-    echo -e "  ${GREEN}[3]${NC} • Hapus User (Pilih Nomor/Nama)"
-    echo -e "  ${GREEN}[4] • Cek Log Service"
-    echo -e "  ${GREEN}[5] • Sync User SSH (System -> ZiVPN)"
-    echo -e "  ${GREEN}[6] • Fix UDP Custom (Exclude Port)"
-    echo -e "  ${GREEN}[7] • Paksa Hapus User Expired"
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "  ${GREEN}[0]${NC} • Kembali ke Menu Utama"
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -ne " ${YELLOW}⇨  Pilih Menu: ${NC}"
-}
-
-function fix_udp() {
-    PORT=$(grep -o '"listen": *"[^"]*"' $CONFIG_FILE | cut -d'"' -f4 | sed 's/://g' | sed 's/0.0.0.0//g')
-    [ -z "$PORT" ] && PORT="5667"
-    if [ -f "/etc/systemd/system/udp-custom.service" ]; then
-        sed -i "s|server -exclude .*|server -exclude 22,53,68,$PORT|g" /etc/systemd/system/udp-custom.service
-        systemctl daemon-reload
-        systemctl restart udp-custom
-        echo "✅ UDP Custom Updated."; sleep 1
-    fi
-}
+# --- SYNC ---
 function sync_ssh() {
-    header
-    echo -e " Syncing..."
+    clear; echo "Syncing..."; 
+    # Clean Ghost
+    users_zivpn=$(jq -r '.auth.config[]' "$CONFIG_FILE" | sed 's/ //g' | sort -u)
+    for u in $users_zivpn; do
+        if [[ "$u" == "zi" || -z "$u" ]]; then continue; fi
+        if ! id "$u" &>/dev/null; then
+            jq --arg u "$u" '.auth.config -= [$u]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+            jq --arg u "$u" 'del(.[$u])' "$USER_DB" > "${USER_DB}.tmp" && mv "${USER_DB}.tmp" "$USER_DB"
+        fi
+    done
+    # Add System User
     while IFS=: read -r username _ uid _ _ _ _; do
         if [[ $uid -ge 1000 && "$username" != "nobody" ]]; then
-            if ! jq -e ".auth.config | index(\"$username\")" "$CONFIG_FILE" > /dev/null; then
+            if ! grep -q "\"$username\"" "$CONFIG_FILE"; then
                 jq --arg user "$username" '.auth.config += [$user]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-                jq --arg u "$username" --arg e "2099-12-31" '.[$u] = {exp: $e}' "$USER_DB" > "${USER_DB}.tmp" && mv "${USER_DB}.tmp" "$USER_DB"
+                raw_exp=$(chage -l "$username" | grep "Account expires" | cut -d: -f2)
+                exp_iso=$(date -d "$raw_exp" +"%Y-%m-%d" 2>/dev/null || echo "2026-12-31")
+                jq --arg u "$username" --arg e "$exp_iso" \
+                   '.[$u] = {exp: $e, quota: "Unlimited", ip: "Unlimited"}' "$USER_DB" > "${USER_DB}.tmp" && mv "${USER_DB}.tmp" "$USER_DB"
             fi
         fi
     done < /etc/passwd
-    restart_service
-    echo -e "✅ Selesai!"; sleep 1
+    jq '.auth.config |= unique' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    restart_service; echo "Done."; sleep 2
 }
 
+# --- MENU ---
 while true; do
-    show_main_menu
-    read -r choice
-    case $choice in
-        1) add_user ;; 
-        2) list_users ;; 
-        3) delete_user ;;
-        4) journalctl -u zivpn -n 20 --no-pager; read -p "Enter..." ;;
-        5) sync_ssh ;; 
-        6) fix_udp ;; 
-        7) /usr/local/sbin/xp-zivpn; echo "Selesai."; sleep 2 ;;
-        0) menu ;; 
-        *) sleep 1 ;;
+    clear
+    echo -e " [1] Create User"
+    echo -e " [2] Monitor User (AMAN)"
+    echo -e " [3] Sync SSH"
+    echo -e " [0] Exit"
+    read -p " Select: " opt
+    case $opt in
+        1) add_user ;;
+        2) list_users ;;
+        3) sync_ssh ;;
+        0) break ;;
     esac
 done

@@ -1,35 +1,23 @@
 #!/bin/bash
-# Simpan sebagai: install-udp.sh
 
-clear
-echo "=========================================="
-echo "    INSTALLER UDP CUSTOM (DEFAULT)        "
-echo "=========================================="
-
-# 1. Hapus & Buat Folder
+cd
 rm -rf /etc/udp
 mkdir -p /etc/udp
+
+# change to time GMT+7
+echo "change to time GMT+7"
 ln -fs /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
 
-# 2. Download Binary UDP Custom
-cd /etc/udp
-wget -q -O udp-custom "https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/udp-custom/udp-custom-linux-amd64"
-chmod +x udp-custom
+# install udp-custom
+echo downloading udp-custom
+wget -q --show-progress --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1ixz82G_ruRBnEEp4vLPNF2KZ1k8UfrkV' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1ixz82G_ruRBnEEp4vLPNF2KZ1k8UfrkV" -O /etc/udp/udp-custom && rm -rf /tmp/cookies.txt
+chmod +x /etc/udp/udp-custom
 
-# 3. Buat Config JSON
-cat <<EOF > /etc/udp/config.json
-{
-  "listen": ":36712",
-  "stream_buffer": 33554432,
-  "receive_buffer": 83886080,
-  "auth": {
-    "mode": "passwords"
-  }
-}
-EOF
+echo downloading default config
+wget -q --show-progress --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1klXTiKGUd2Cs5cBnH3eK2Q1w50Yx3jbf' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1klXTiKGUd2Cs5cBnH3eK2Q1w50Yx3jbf" -O /etc/udp/config.json && rm -rf /tmp/cookies.txt
 chmod 644 /etc/udp/config.json
 
-# 4. Buat Service (Default Exclude: 22=SSH, 53=DNS, 68=DHCP)
+if [ -z "$1" ]; then
 cat <<EOF > /etc/systemd/system/udp-custom.service
 [Unit]
 Description=UDP Custom by ePro Dev. Team
@@ -37,7 +25,7 @@ Description=UDP Custom by ePro Dev. Team
 [Service]
 User=root
 Type=simple
-ExecStart=/etc/udp/udp-custom server -exclude 22,53,68,5667
+ExecStart=/etc/udp/udp-custom server
 WorkingDirectory=/etc/udp/
 Restart=always
 RestartSec=2s
@@ -45,12 +33,29 @@ RestartSec=2s
 [Install]
 WantedBy=default.target
 EOF
+else
+cat <<EOF > /etc/systemd/system/udp-custom.service
+[Unit]
+Description=UDP Custom by ePro Dev. Team
 
-# 5. Start Service
-systemctl daemon-reload
-systemctl enable udp-custom &>/dev/null
+[Service]
+User=root
+Type=simple
+ExecStart=/etc/udp/udp-custom server -exclude $1
+WorkingDirectory=/etc/udp/
+Restart=always
+RestartSec=2s
+
+[Install]
+WantedBy=default.target
+EOF
+fi
+
+echo start service udp-custom
 systemctl start udp-custom &>/dev/null
-systemctl restart udp-custom &>/dev/null
 
-echo -e "\n[OK] UDP Custom Terinstall."
-echo -e "Port Exclude Default: 22, 53, 68"
+echo enable service udp-custom
+systemctl enable udp-custom &>/dev/null
+
+echo restart service udp-custom
+systemctl restart udp-custom &>/dev/null

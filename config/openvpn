@@ -102,6 +102,12 @@ echo '</ca>' >> /etc/openvpn/ssl.ovpn
 cp /etc/openvpn/ws-ssl.ovpn /var/www/html/ssl.ovpn
 cd /var/www/html/
 zip Kyt-Project.zip tcp.ovpn udp.ovpn ssl.ovpn ws-ssl.ovpn > /dev/null 2>&1
+wget -q -O /var/www/html/logo.jpg "https://github.com/hokagelegend9999/alpha.v2/blob/main/ssh/logo.png"
+    
+    # Jika Anda belum upload ke github, script akan pakai placeholder agar tidak error
+    if [ ! -f /var/www/html/logo.jpg ]; then
+        wget -q -O /var/www/html/logo.jpg "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/1200px-Python-logo-notext.svg.png"
+    fi
 cd
 cat <<'mySiteOvpn' > /var/www/html/index.html
 <!DOCTYPE html>

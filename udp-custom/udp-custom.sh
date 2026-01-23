@@ -38,13 +38,10 @@ cat <<EOF > /etc/systemd/system/udp-custom.service
 [Unit]
 Description=UDP Custom by ePro Dev. Team
 
-[Unit]
-Description=UDP Custom by ePro Dev. Team
-
 [Service]
 User=root
 Type=simple
-ExecStart=/etc/udp/udp-custom server -exclude 22,53,68
+ExecStart=/etc/udp/udp-custom server -exclude $1
 WorkingDirectory=/etc/udp/
 Restart=always
 RestartSec=2s

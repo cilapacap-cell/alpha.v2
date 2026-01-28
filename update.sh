@@ -1,6 +1,22 @@
 #!/bin/bash
 
-# Pastikan lolcat terinstall untuk pewarnaan header
+# ==========================================
+#  HOKAGE LEGEND - UPDATE SCRIPT (THEMED)
+# ==========================================
+
+# --- DEFINISI WARNA TEMA ---
+NC='\033[0m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+ORANGE='\033[0;33m'
+CYAN='\033[0;36m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+WHITE='\033[0;37m'
+BOLD='\033[1m'
+BLINK='\033[5m'
+
+# --- INSTALL LOLCAT (JIKA BELUM ADA) ---
 if ! command -v lolcat &> /dev/null; then
     apt-get install ruby -y &> /dev/null
     gem install lolcat &> /dev/null
@@ -8,48 +24,97 @@ fi
 
 clear
 
-# --- FUNGSI ANIMASI LOADING ---
-fun_bar() {
+# ==================================================
+# FUNGSI GRADASI (SESUAI TEMA HOKAGE)
+# ==================================================
+print_gradient() {
+    local text="$1"
+    awk -v text="$text" 'BEGIN {
+        len = length(text);
+        r_start=255; g_start=215; b_start=0;
+        r_mid=0;      g_mid=128;   b_mid=255;
+        r_end=138;    g_end=43;    b_end=226;
+        for (i=0; i<len; i++) {
+            ratio = i / (len-1);
+            if (ratio <= 0.5) {
+                f = ratio * 2;
+                r = int(r_start + (r_mid - r_start) * f);
+                g = int(g_start + (g_mid - g_start) * f);
+                b = int(b_start + (b_mid - b_start) * f);
+            } else {
+                f = (ratio - 0.5) * 2;
+                r = int(r_mid + (r_end - r_mid) * f);
+                g = int(g_mid + (g_end - g_mid) * f);
+                b = int(b_mid + (b_end - b_mid) * f);
+            }
+            printf "\033[38;2;%d;%d;%dm%s", r, g, b, substr(text, i+1, 1);
+        }
+        printf "\033[0m\n";
+    }'
+}
+
+# --- FUNGSI ANIMASI LOADING PREMIUM ---
+hokage_anim() {
     CMD="$1"
+    
+    # Menjalankan perintah update di background
     (
         [[ -e $HOME/fim ]] && rm $HOME/fim
         $CMD >/dev/null 2>&1
         touch $HOME/fim
     ) >/dev/null 2>&1 &
-
-    tput civis
-    echo -ne "  \033[0;33mSedang Memproses Update \033[1;37m- \033[0;33m["
-    while true; do
-        for ((i = 0; i < 18; i++)); do
-            echo -ne "\033[0;32m#"
-            sleep 0.1s
-        done
+    
+    PID=$! # Ambil Process ID
+    
+    tput civis # Sembunyikan kursor
+    
+    # Loop animasi selama proses berjalan
+    while [ -d /proc/$PID ]; do
+        # Frame 1
+        echo -ne "\r${CYAN} [${ORANGE}●${WHITE}•••••••••${CYAN}] ${PURPLE}Downloading Data...${NC}"
+        sleep 0.2
+        # Frame 2
+        echo -ne "\r${CYAN} [${ORANGE}••${WHITE}••••••••${CYAN}] ${PURPLE}Verifying Files... ${NC}"
+        sleep 0.2
+        # Frame 3
+        echo -ne "\r${CYAN} [${ORANGE}••••${WHITE}••••••${CYAN}] ${PURPLE}Unpacking Data...  ${NC}"
+        sleep 0.2
+        # Frame 4
+        echo -ne "\r${CYAN} [${ORANGE}••••••${WHITE}••••${CYAN}] ${PURPLE}Configuring...     ${NC}"
+        sleep 0.2
+        # Frame 5
+        echo -ne "\r${CYAN} [${ORANGE}••••••••${WHITE}••${CYAN}] ${PURPLE}Setting Cronjob... ${NC}"
+        sleep 0.2
+        # Frame 6
+        echo -ne "\r${CYAN} [${ORANGE}••••••••••${CYAN}] ${PURPLE}Finalizing...      ${NC}"
+        sleep 0.2
+        
+        # Cek jika proses selesai via file flag
         if [[ -e $HOME/fim ]]; then
             rm $HOME/fim
             break
         fi
-        echo -e "\033[0;33m]"
-        sleep 1s
-        tput cuu1
-        tput dl1
-        echo -ne "  \033[0;33mSedang Memproses Update \033[1;37m- \033[0;33m["
     done
-    echo -e "\033[0;33m]\033[1;37m -\033[1;32m SUKSES !\033[1;37m"
-    tput cnorm
+    
+    # Tampilan Sukses
+    echo -ne "\r${CYAN} [${GREEN}██████████${CYAN}] ${GREEN}${BOLD}UPDATE SUCCESS!    ${NC}\n"
+    tput cnorm # Tampilkan kursor kembali
 }
 
-# --- FUNGSI UPDATE UTAMA ---
-res1() {
-    # 1. Download & Install FV Tunnel (Optional/Config)
+# ==================================================
+# LOGIKA UPDATE (Script Asli Anda + Cron XP Baru)
+# ==================================================
+run_update() {
+    # 1. Download & Install FV Tunnel
     wget -qO- fv-tunnel "https://raw.githubusercontent.com/hokagelegend9999/alpha.v2/refs/heads/main/config/fv-tunnel" 
     chmod +x fv-tunnel 
     bash fv-tunnel
     rm -rf fv-tunnel
     
-    # 2. Bersihkan Folder sbin (Hati-hati, pastikan ZIP lengkap)
+    # 2. Bersihkan Folder sbin
     rm -rf /usr/local/sbin/*
     
-    # 3. Download & Ekstrak Menu (Berisi: menu, xp-zivpn, ssh-accountant, dll)
+    # 3. Download & Ekstrak Menu
     wget https://github.com/hokagelegend9999/alpha.v2/raw/refs/heads/main/menu/menu.zip
     unzip -o menu.zip > /dev/null 2>&1
     chmod +x menu/*
@@ -57,70 +122,78 @@ res1() {
     rm -rf menu
     rm -rf menu.zip
     
-    # 4. Download Menu Utama Spesifik (Overwrite jika perlu update terpisah)
-    # Jika file 'menu' sudah ada di dalam zip, langkah ini bisa dihapus/diabaikan
+    # 4. Download Menu Utama
     wget -q -O /usr/local/sbin/menu https://raw.githubusercontent.com/hokagelegend9999/alpha.v2/refs/heads/main/menu/menu
     chmod +x /usr/local/sbin/menu
     
-    # 5. Buat Folder Usage (Penting untuk ssh-accountant)
+    # 5. Buat Folder Usage
     mkdir -p /etc/ssh/usage
     mkdir -p /etc/zivpn/usage
     chmod 777 /etc/ssh/usage
     chmod 777 /etc/zivpn/usage
     
-    # 6. FIX WINDOWS LINE ENDING & PERMISSION
+    # 6. FIX PERMISSIONS
     sed -i 's/\r$//' /usr/local/sbin/*
     chmod +x /usr/local/sbin/*
 
-    # ==========================================
-    # SETTING CRON JOB (JANTUNG OTOMATISASI)
-    # ==========================================
+    # ------------------------------------------
+    # SETTING CRON JOB (XP UPDATE TERBARU)
+    # ------------------------------------------
 
-    # A. SSH ACCOUNTANT (Pencatat Kuota Realtime - Tiap 1 Menit)
-    # Pastikan file ssh-accountant sudah ada di /usr/local/sbin/ dari hasil unzip
+    # A. SSH ACCOUNTANT
     cat >/etc/cron.d/ssh_accountant <<-END
     SHELL=/bin/sh
     PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
     * * * * * root /usr/local/sbin/ssh-accountant
 END
 
-    # B. XP-ZIVPN (Auto Expired & Sync - Jam 00:00 Malam)
+    # B. XP-ZIVPN
     cat >/etc/cron.d/xp_zivpn <<-END
     SHELL=/bin/sh
     PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
     0 0 * * * root /usr/local/sbin/xp-zivpn
 END
 
-    # C. LIMIT QUOTA (Auto Lock User Over Quota - Tiap 10 Menit)
-    # Menghapus jadwal lama (cleanup)
+    # C. LIMIT QUOTA
     rm -f /etc/cron.d/limit_quota
     sed -i "/limit-quota/d" /etc/crontab
-    
-    # Membuat jadwal baru
     cat >/etc/cron.d/limit_quota <<-EOF
     SHELL=/bin/sh
     PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
     */10 * * * * root /usr/local/sbin/limit-quota
 EOF
 
-    # Restart Cron agar semua jadwal berjalan
+    # D. XP GENERAL (AUTO DELETE YANG DIPERBAIKI)
+    cat >/etc/cron.d/xp_all <<-END
+    SHELL=/bin/sh
+    PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+    0 0 * * * root /usr/local/sbin/xp
+END
+
+    # Restart Cron
     service cron restart
 }
 
-# --- EKSEKUSI ---
+# ==================================================
+# EKSEKUSI UTAMA
+# ==================================================
 rm -rf update.sh
 clear
-echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | lolcat
-echo -e " \e[1;97;101m UPDATE SCRIPT SEDANG BERJALAN !             \e[0m"
-echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | lolcat
 echo -e ""
-echo -e "  \033[1;91m Update Script Service & Menu\033[1;37m"
+print_gradient "╭══════════════════════════════════════════╮"
+print_gradient "│      HOKAGE LEGEND SYSTEM UPDATER        │"
+print_gradient "╰══════════════════════════════════════════╯"
+echo -e ""
+echo -e "  ${ORANGE}Please wait while we update your resources...${NC}"
+echo -e ""
 
-fun_bar 'res1'
+# Jalankan Animasi Update
+hokage_anim 'run_update'
 
-echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | lolcat
 echo -e ""
-echo -e " \033[1;32m Update Selesai! Silakan cek menu.\033[0m"
+print_gradient "╭══════════════════════════════════════════╮"
+print_gradient "│          UPDATE COMPLETED !!             │"
+print_gradient "╰══════════════════════════════════════════╯"
 echo -e ""
-read -n 1 -s -r -p "Tekan [ Enter ] untuk kembali ke menu"
+read -n 1 -s -r -p " Press [ Enter ] to back to menu"
 menu

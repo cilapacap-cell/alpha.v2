@@ -217,8 +217,7 @@ vma=$(grep -c -E "^### " "/etc/xray/config.json" 2>/dev/null || echo 0)
 let vma=$vma/2
 trb=$(grep -c -E "^#! " "/etc/xray/config.json" 2>/dev/null || echo 0)
 let trb=$trb/2
-ssa=$(grep -c -E "^#ss# " "/etc/xray/config.json" 2>/dev/null || echo 0)
-let ssa=$ssa/2
+ssa=$(cat /etc/shadowsocks/.shadowsocks.db 2>/dev/null | grep -c "###" || echo 0)
 ssh1=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd | wc -l)
 
 # VISUAL ASSETS

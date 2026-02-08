@@ -210,18 +210,15 @@ status_zivpn=$(cek_service zivpn)
 status_udp_custom=$(cek_service udp-custom)
 
 # INFO AKUN (XRAY)
-if systemctl is-active --quiet server-sldns; then
-    status_slowdns="${green}ON🟢${NC}"
-elif systemctl is-active --quiet client-sldns; then
-    status_slowdns="${green}ON🟢${NC}"
-elif pgrep -f "sldns-server" > /dev/null; then
-    status_slowdns="${green}ON🟢${NC}"
-elif pgrep -f "sldns-client" > /dev/null; then
-    status_slowdns="${green}ON🟢${NC}"
-elif netstat -nul | grep -q ":5300"; then
-    status_slowdns="${green}ON🟢${NC}"
+# --- 1. DEFINISI STATUS SLOWDNS ---
+# Cek apakah service server-sl aktif
+if systemctl is-active --quiet server-sl; then
+    status_slowdns="${green}ON${NC}"
+elif systemctl is-active --quiet client-sl; then
+    # Cek alternatif nama service
+    status_slowdns="${green}ON${NC}"
 else
-    status_slowdns="${RED}OFF🔴${NC}"
+    status_slowdns="${red}OFF${NC}"
 fi
 # 1. VLESS (#&)
 vla=$(grep -E "^#& " "/etc/xray/config.json" 2>/dev/null | cut -d ' ' -f 2 | sort | uniq | wc -l)

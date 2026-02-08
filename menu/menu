@@ -210,12 +210,16 @@ status_zivpn=$(cek_service zivpn)
 status_udp_custom=$(cek_service udp-custom)
 
 # INFO AKUN (XRAY)
-# Menggunakan grep -c langsung tanpa lo
-
-
-# INFO AKUN (XRAY) & SSH
-# Fix Logic: Menggunakan sort | uniq agar user hasil restore terbaca (tidak perlu dibagi 2)
-
+# --- 1. DEFINISI STATUS SLOWDNS ---
+# Cek apakah service server-sl aktif
+if systemctl is-active --quiet server-sl; then
+    status_slowdns="${green}ON${NC}"
+elif systemctl is-active --quiet client-sl; then
+    # Cek alternatif nama service
+    status_slowdns="${green}ON${NC}"
+else
+    status_slowdns="${red}OFF${NC}"
+fi
 # 1. VLESS (#&)
 vla=$(grep -E "^#& " "/etc/xray/config.json" 2>/dev/null | cut -d ' ' -f 2 | sort | uniq | wc -l)
 
@@ -267,7 +271,7 @@ echo -e "               ${KIRI} ${RED} HOKAGE LEGEND STORE TUNNELING  ${NC} ${KA
 echo -e " ${z}╭════════════════╮╭══════════════════╮╭════════════════════╮${NC}"
 echo -e " ${z}│${NC}$y SSH$NC     : $status_ssh" "  $y NGINX$NC      : $status_nginx" "    $y XRAY$NC    : $status_xray  $NC${z}│$NC" 
 echo -e " ${z}│${NC}$y WS-ePRO$NC : $ssh_ws_status"  " $y  DROPBEAR$NC   : $status_dropbear" "    $y HAPROXY$NC : $status_haproxy  $NC${z}│$NC" 
-echo -e " ${z}│${NC}$y ZiVPN$NC   : $status_zivpn"    "  $y UDP-CUSTOM$NC : $status_udp_custom" "                     $NC${z}│$NC" 
+echo -e " ${z}│${NC}$y ZiVPN$NC      : $status_zivpn"    "  $y UDP-CUSTOM$NC  : $status_udp_custom" "    $y SLOWDNS$NC : $status_slowdns  $NC${z}│$NC"
 echo -e " ${z}╰════════════════╯╰══════════════════╯╰════════════════════╯${NC}"
 echo -e "             ${KIRI} ${grenbo}⇱ ALL FITUR SC TUNNELING ⇲${NC} ${KANAN}"
 echo -e "    ${z}══════════════════════════════════════════════════════${NC}"
@@ -276,7 +280,7 @@ echo -e "             ${z}$NC [${r}02${NC}]$green MENU VMESS$NC      ${z}│$NC 
 echo -e "             ${z}$NC [${r}03${NC}]$green MENU VLESS$NC      ${z}│$NC [${r}08${NC}]$green MENU UTILITY$NC   ${z} $NC"
 echo -e "             ${z}$NC [${r}04${NC}]$green MENU TROJAN$NC     ${z}│$NC [${r}09${NC}]$green MENU ZIVPN$NC     ${z} $NC"
 echo -e "             ${z}$NC [${r}05${NC}]$green MENU SSWS$NC       ${z}│$NC [${r}10${NC}]$green CEK VPS$NC        ${z} $NC"
-echo -e "             ${z}$NC [${r}05${NC}]$green MENU SLOW DNS$NC"
+echo -e "             ${z}$NC [${r}11${NC}]$green MENU SLOW DNS$NC"
 echo -e "    ${z}══════════════════════════════════════════════════════${NC}"
 echo -e "             ${KIRI}${z} INFORMATION YOUR ACTIVE PERIOD ${z}${KANAN}"
 echo -e " ${z}╭══════════════════════════════════════════════════════════╮${NC}"

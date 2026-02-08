@@ -210,15 +210,18 @@ status_zivpn=$(cek_service zivpn)
 status_udp_custom=$(cek_service udp-custom)
 
 # INFO AKUN (XRAY)
-# --- 1. DEFINISI STATUS SLOWDNS ---
-# Cek apakah service server-sl aktif
-if systemctl is-active --quiet server-sl; then
-    status_slowdns="${green}ON${NC}"
-elif systemctl is-active --quiet client-sl; then
-    # Cek alternatif nama service
-    status_slowdns="${green}ON${NC}"
+if systemctl is-active --quiet server-sldns; then
+    status_slowdns="${green}ON🟢${NC}"
+elif systemctl is-active --quiet client-sldns; then
+    status_slowdns="${green}ON🟢${NC}"
+elif pgrep -f "sldns-server" > /dev/null; then
+    status_slowdns="${green}ON🟢${NC}"
+elif pgrep -f "sldns-client" > /dev/null; then
+    status_slowdns="${green}ON🟢${NC}"
+elif netstat -nul | grep -q ":5300"; then
+    status_slowdns="${green}ON🟢${NC}"
 else
-    status_slowdns="${red}OFF${NC}"
+    status_slowdns="${RED}OFF🔴${NC}"
 fi
 # 1. VLESS (#&)
 vla=$(grep -E "^#& " "/etc/xray/config.json" 2>/dev/null | cut -d ' ' -f 2 | sort | uniq | wc -l)
@@ -271,7 +274,7 @@ echo -e "               ${KIRI} ${RED} HOKAGE LEGEND STORE TUNNELING  ${NC} ${KA
 echo -e " ${z}╭════════════════╮╭══════════════════╮╭════════════════════╮${NC}"
 echo -e " ${z}│${NC}$y SSH$NC     : $status_ssh" "  $y NGINX$NC      : $status_nginx" "    $y XRAY$NC    : $status_xray  $NC${z}│$NC" 
 echo -e " ${z}│${NC}$y WS-ePRO$NC : $ssh_ws_status"  " $y  DROPBEAR$NC   : $status_dropbear" "    $y HAPROXY$NC : $status_haproxy  $NC${z}│$NC" 
-echo -e " ${z}│${NC}$y ZiVPN$NC      : $status_zivpn"    "  $y UDP-CUSTOM$NC  : $status_udp_custom" "    $y SLOWDNS$NC : $status_slowdns  $NC${z}│$NC"
+echo -e " ${z}│${NC}$y ZiVPN$NC   : $status_zivpn"    "  $y UDP-CUSTOM$NC : $status_udp_custom" "    $y SLOWDNS$NC : $status_slowdns  $NC${z}│$NC"
 echo -e " ${z}╰════════════════╯╰══════════════════╯╰════════════════════╯${NC}"
 echo -e "             ${KIRI} ${grenbo}⇱ ALL FITUR SC TUNNELING ⇲${NC} ${KANAN}"
 echo -e "    ${z}══════════════════════════════════════════════════════${NC}"

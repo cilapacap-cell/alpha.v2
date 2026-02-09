@@ -212,13 +212,13 @@ status_udp_custom=$(cek_service udp-custom)
 # INFO AKUN (XRAY)
 # --- 1. DEFINISI STATUS SLOWDNS ---
 # Cek apakah service server-sl aktif
-if systemctl is-active --quiet server-sl; then
-    status_slowdns="${green}ON${NC}"
-elif systemctl is-active --quiet client-sl; then
+if systemctl is-active --quiet server-sldns; then
+    status_slowdns="${green}ON🟢${NC}"
+elif systemctl is-active --quiet client-sldns; then
     # Cek alternatif nama service
-    status_slowdns="${green}ON${NC}"
+    status_slowdns="${green}ON🟢${NC}"
 else
-    status_slowdns="${red}OFF${NC}"
+    status_slowdns="${red}OFF$🔴{NC}"
 fi
 # 1. VLESS (#&)
 vla=$(grep -E "^#& " "/etc/xray/config.json" 2>/dev/null | cut -d ' ' -f 2 | sort | uniq | wc -l)

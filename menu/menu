@@ -218,7 +218,7 @@ elif systemctl is-active --quiet client-sldns; then
     # Cek alternatif nama service
     status_slowdns="${green}ON🟢${NC}"
 else
-    status_slowdns="${red}OFF$🔴{NC}"
+    status_slowdns="${red}OFF🔴${NC}"
 fi
 # 1. VLESS (#&)
 vla=$(grep -E "^#& " "/etc/xray/config.json" 2>/dev/null | cut -d ' ' -f 2 | sort | uniq | wc -l)

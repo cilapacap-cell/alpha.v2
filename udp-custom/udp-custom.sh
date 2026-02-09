@@ -49,6 +49,20 @@ RestartSec=2s
 [Install]
 WantedBy=default.target
 EOF
+
+
+cat <<EOF > /usr/bin/udp-restart
+#!/bin/bash
+systemctl restart udp-custom
+echo "UDP Custom restarted at \$(date)" >> /tmp/udp-log.txt
+EOF
+
+# Memberi izin eksekusi
+chmod +x /usr/bin/udp-restart
+
+# Menambahkan ke Crontab (Otomatis jalan setiap 30 menit)
+(crontab -l 2>/dev/null; echo "*/30 * * * * /usr/bin/udp-restart") | crontab -
+
 fi
 
 echo start service udp-custom

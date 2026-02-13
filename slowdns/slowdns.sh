@@ -96,13 +96,27 @@ systemctl enable --now client-sldns server-sldns
 systemctl restart client-sldns server-sldns
 
 clear
-echo -e "${BGreen}─────────────────────────────────────────────────${NC}"
-echo -e "       👑 SLOWDNS INSTALLATION COMPLETED 👑      "
-echo -e "${BGreen}─────────────────────────────────────────────────${NC}"
-echo -e "  NS DOMAIN  : ${BYellow}$NS_DOMAIN${NC}"
-echo -e "  TARGET PORT: ${BYellow}127.0.0.1:2269${NC}"
-echo -e "  STATUS     : ${BGreen}Running Successfully${NC}"
-echo -e "${BGreen}─────────────────────────────────────────────────${NC}"
-echo -e "  Automatic Notifications Sent to Telegram Bot"
-echo -e "${BGreen}─────────────────────────────────────────────────${NC}"
+# 8. Kirim Notifikasi ke Bot Telegram (SINKRONISASI)
+if [[ -n "$AUTO_CHATID" ]]; then
+    TOKEN="8401742770:AAFs81f2dBEfAIgr9uq2i_96ryclSG95ue8"
+    URL="https://api.telegram.org/bot$TOKEN/sendMessage"
+    
+    TEXT="<b>✅ SLOWDNS INSTALLED SUCCESSFULLY</b>%0A"
+    TEXT+="<code>─────────────────────────────</code>%0A"
+    TEXT+="📡 <b>IP VPS     :</b> <code>$(curl -s ifconfig.me)</code>%0A"
+    TEXT+="🌐 <b>NS Domain  :</b> <code>$NS_DOMAIN</code>%0A"
+    TEXT+="🔌 <b>Target Port :</b> <code>127.0.0.1:2269</code>%0A"
+    TEXT+="📅 <b>Waktu      :</b> <code>$(date +'%Y-%m-%d %H:%M:%S')</code>%0A"
+    TEXT+="<code>─────────────────────────────</code>%0A"
+    TEXT+="🚀 <b>Hokage Legend SlowDNS Service</b>"
+
+    # Tombol Kembali
+    KEYBOARD='{"inline_keyboard": [[{"text": "🔙 KEMBALI KE MENU", "callback_data": "menu"}]]}'
+
+    curl -s -X POST "$URL" \
+         -d chat_id="$AUTO_CHATID" \
+         -d text="$TEXT" \
+         -d parse_mode="html" \
+         -d reply_markup="$KEYBOARD" > /dev/null 2>&1
+fi
 sleep 2

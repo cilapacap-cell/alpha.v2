@@ -2,68 +2,62 @@
 # =========================================
 # Quick Setup | SlowDNS Manager (Auto-Mode)
 # =========================================
+# [INFO] Integrasi Otomatis dengan Bot Hokage Legend
+# =========================================
+
 BGreen='\e[1;32m'
+BYellow='\e[1;33m'
+BRed='\e[1;31m'
 NC='\e[0m'
 
-# Setting IPtables
-iptables -I INPUT -p udp --dport 5300 -j ACCEPT
-iptables -t nat -I PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 5300
-netfilter-persistent save
-netfilter-persistent reload
-
-cd
-rm -rf /root/nsdomain
+# 1. Bersihkan Konfigurasi Lama (Antisipasi Re-install)
+iptables -t nat -F PREROUTING
+iptables -D INPUT -p udp --dport 5300 -j ACCEPT 2>/dev/null
 rm -f /root/nsdomain
 
-# =================================================================
-# [PERBAIKAN] LOGIKA AUTO-INPUT DARI BOT
-# =================================================================
+# 2. Logika Sinkronisasi Variabel Bot
+# Menangkap variabel AUTO_NS yang dikirim bot melalui SSH wrapper
 if [[ -n "$AUTO_NS" ]]; then
-    # Jika variabel dikirim dari Bot, gunakan otomatis
-    SUB_DOMAIN="${AUTO_NS}"
-    echo -e "${BGreen} [BOT MODE] Menggunakan NS: $SUB_DOMAIN ${NC}"
+    NS_DOMAIN=$(echo "$AUTO_NS" | tr -d '[:space:]')
+    echo -e "${BGreen} [BOT MODE] NS Domain Diterima: $NS_DOMAIN ${NC}"
 else
-    # Jika dijalankan manual di terminal
-    read -rp "Masukkan Subdomain Yang Dipakai Host Sekarang: " -e sub
-    SUB_DOMAIN=${sub}
+    # Jika dijalankan manual (bukan via bot)
+    echo -e "${BYellow} [!] Warning: Variabel Bot tidak terdeteksi.${NC}"
+    read -rp " Masukkan Subdomain NS: " manual_ns
+    NS_DOMAIN=${manual_ns:-"ns.hokage.web.id"}
 fi
 
-NS_DOMAIN=${SUB_DOMAIN}
 echo "$NS_DOMAIN" > /root/nsdomain
-# =================================================================
 
-nameserver=$(cat /root/nsdomain)
-domen=$(cat /etc/xray/domain)
+# 3. Pengaturan Jaringan (Port 53 & 5300)
+iptables -I INPUT -p udp --dport 5300 -j ACCEPT
+iptables -t nat -I PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 5300
+netfilter-persistent save >/dev/null 2>&1
 
-# Install Dependencies
+# 4. Instalasi Dependencies
 apt update -y
-apt install -y python3 python3-dnslib net-tools ncurses-utils dnsutils git curl wget screen cron iptables dos2unix
+apt install -y python3 python3-dnslib net-tools dnsutils curl wget git dos2unix lsof >/dev/null 2>&1
 
-# Konfigurasi Binary SlowDNS
-rm -rf /etc/slowdns
-mkdir -m 777 /etc/slowdns
-wget -q -O /etc/slowdns/server.key "https://raw.githubusercontent.com/hokagelegend9999/alpha.v2/refs/heads/main/slowdns/server.key"
-wget -q -O /etc/slowdns/server.pub "https://raw.githubusercontent.com/hokagelegend9999/alpha.v2/refs/heads/main/slowdns/server.pub"
-wget -q -O /etc/slowdns/sldns-server "https://raw.githubusercontent.com/hokagelegend9999/alpha.v2/refs/heads/main/slowdns/sldns-server"
-wget -q -O /etc/slowdns/sldns-client "https://raw.githubusercontent.com/hokagelegend9999/alpha.v2/refs/heads/main/slowdns/sldns-client"
-chmod +x /etc/slowdns/*
+# Mematikan systemd-resolved agar port 53 bebas (Penting untuk Ubuntu)
+if systemctl is-active --quiet systemd-resolved; then
+    systemctl stop systemd-resolved
+    systemctl disable systemd-resolved
+fi
 
-# Install Systemd Service
-cat > /etc/systemd/system/client-sldns.service << END
-[Unit]
-Description=Client SlowDNS By Hokage Legend
-After=network.target nss-lookup.target
+# 5. Konfigurasi Binary SlowDNS
+mkdir -p /etc/slowdns
+chmod 777 /etc/slowdns
 
-[Service]
-Type=simple
-User=root
-ExecStart=/etc/slowdns/sldns-client -udp 8.8.8.8:53 --pubkey-file /etc/slowdns/server.pub $nameserver 127.0.0.1:2222
-Restart=on-failure
+REPO="https://raw.githubusercontent.com/hokagelegend9999/alpha.v2/refs/heads/main/slowdns"
+wget -q -O /etc/slowdns/server.key "${REPO}/server.key"
+wget -q -O /etc/slowdns/server.pub "${REPO}/server.pub"
+wget -q -O /etc/slowdns/sldns-server "${REPO}/sldns-server"
+wget -q -O /etc/slowdns/sldns-client "${REPO}/sldns-client"
+chmod +x /etc/slowdns/sldns-server
+chmod +x /etc/slowdns/sldns-client
 
-[Install]
-WantedBy=multi-user.target
-END
-
+# 6. Pembuatan Systemd Service (Premium & Stabil)
+# Server Service
 cat > /etc/systemd/system/server-sldns.service << END
 [Unit]
 Description=Server SlowDNS By Hokage Legend
@@ -72,7 +66,7 @@ After=network.target nss-lookup.target
 [Service]
 Type=simple
 User=root
-ExecStart=/etc/slowdns/sldns-server -udp :5300 -privkey-file /etc/slowdns/server.key $nameserver 127.0.0.1:2269
+ExecStart=/etc/slowdns/sldns-server -udp :5300 -privkey-file /etc/slowdns/server.key $NS_DOMAIN 127.0.0.1:2269
 Restart=always
 RestartSec=3s
 
@@ -80,10 +74,35 @@ RestartSec=3s
 WantedBy=multi-user.target
 END
 
-# Enable & Start
+# Client Service
+cat > /etc/systemd/system/client-sldns.service << END
+[Unit]
+Description=Client SlowDNS By Hokage Legend
+After=network.target nss-lookup.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/etc/slowdns/sldns-client -udp 8.8.8.8:53 --pubkey-file /etc/slowdns/server.pub $NS_DOMAIN 127.0.0.1:2269
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+END
+
+# 7. Finalisasi
 systemctl daemon-reload
 systemctl enable --now client-sldns server-sldns
 systemctl restart client-sldns server-sldns
 
-echo -e "\e[1;32m Success.. \e[0m"
+clear
+echo -e "${BGreen}─────────────────────────────────────────────────${NC}"
+echo -e "       👑 SLOWDNS INSTALLATION COMPLETED 👑      "
+echo -e "${BGreen}─────────────────────────────────────────────────${NC}"
+echo -e "  NS DOMAIN  : ${BYellow}$NS_DOMAIN${NC}"
+echo -e "  TARGET PORT: ${BYellow}127.0.0.1:2269${NC}"
+echo -e "  STATUS     : ${BGreen}Running Successfully${NC}"
+echo -e "${BGreen}─────────────────────────────────────────────────${NC}"
+echo -e "  Automatic Notifications Sent to Telegram Bot"
+echo -e "${BGreen}─────────────────────────────────────────────────${NC}"
 sleep 2

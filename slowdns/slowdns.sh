@@ -28,7 +28,7 @@ else
     SUB_DOMAIN=${sub}
 fi
 
-NS_DOMAIN=ns-${SUB_DOMAIN}
+NS_DOMAIN=${SUB_DOMAIN}
 echo "$NS_DOMAIN" > /root/nsdomain
 # =================================================================
 

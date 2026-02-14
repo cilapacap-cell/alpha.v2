@@ -44,6 +44,11 @@ if systemctl is-active --quiet systemd-resolved; then
     systemctl disable systemd-resolved
 fi
 
+# 🛡️ FIX: Menghindari VPS kehilangan koneksi DNS (Tidak bisa resolve hostnames)
+rm -f /etc/resolv.conf
+echo "nameserver 8.8.8.8" > /etc/resolv.conf
+echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+
 # 5. Konfigurasi Binary SlowDNS
 mkdir -p /etc/slowdns
 chmod 777 /etc/slowdns
@@ -103,10 +108,10 @@ if [[ -n "$AUTO_CHATID" ]]; then
     
     TEXT="<b>✅ SLOWDNS INSTALLED SUCCESSFULLY</b>%0A"
     TEXT+="<code>─────────────────────────────</code>%0A"
-    TEXT+="📡 <b>IP VPS     :</b> <code>$(curl -s ifconfig.me)</code>%0A"
+    TEXT+="📡 <b>IP VPS      :</b> <code>$(curl -s ifconfig.me)</code>%0A"
     TEXT+="🌐 <b>NS Domain  :</b> <code>$NS_DOMAIN</code>%0A"
     TEXT+="🔌 <b>Target Port :</b> <code>127.0.0.1:2269</code>%0A"
-    TEXT+="📅 <b>Waktu      :</b> <code>$(date +'%Y-%m-%d %H:%M:%S')</code>%0A"
+    TEXT+="📅 <b>Waktu       :</b> <code>$(date +'%Y-%m-%d %H:%M:%S')</code>%0A"
     TEXT+="<code>─────────────────────────────</code>%0A"
     TEXT+="🚀 <b>Hokage Legend SlowDNS Service</b>"
 

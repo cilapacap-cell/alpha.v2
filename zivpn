@@ -150,48 +150,6 @@ netfilter-persistent save >/dev/null 2>&1
 iptables-save > /etc/iptables.up.rules
 
 # ==========================================
-#  7. DATABASE & CRON JOB (XP / AUTO-DELETE)
-# ==========================================
-echo -e "${GREEN}[7/8] Menyiapkan Database & Auto-Delete...${NC}"
-if [ ! -f "/etc/zivpn/user-db.json" ]; then
-    echo "{}" > /etc/zivpn/user-db.json
-fi
-
-cat <<'EOF' > /usr/local/sbin/xp-zivpn
-#!/bin/bash
-CONFIG_FILE="/etc/zivpn/config.json"
-USER_DB="/etc/zivpn/user-db.json"
-SERVICE_NAME="zivpn.service"
-now_sec=$(date +%s)
-
-if [[ ! -f "$USER_DB" || ! -f "$CONFIG_FILE" ]]; then exit 0; fi
-RESTART_REQUIRED=false
-
-jq -r 'to_entries[] | "\(.key)|\(.value.exp)"' "$USER_DB" | while IFS='|' read -r username exp_date; do
-    if [[ "$exp_date" == "null" || -z "$exp_date" ]]; then continue; fi
-    exp_sec=$(date -d "$exp_date" +%s 2>/dev/null)
-    if [[ $? -ne 0 ]]; then continue; fi
-    
-    if [[ $exp_sec -lt $now_sec ]]; then
-        jq --arg u "$username" '.auth.config -= [$u]' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-        jq --arg u "$username" 'del(.[$u])' "$USER_DB" > "${USER_DB}.tmp" && mv "${USER_DB}.tmp" "$USER_DB"
-        RESTART_REQUIRED=true
-        echo "$(date): User $username EXPIRED and deleted." >> /var/log/zivpn-xp.log
-    fi
-done
-
-if [ "$RESTART_REQUIRED" = true ]; then systemctl restart "$SERVICE_NAME"; fi
-EOF
-chmod +x /usr/local/sbin/xp-zivpn
-
-echo "0 0 * * * /usr/local/sbin/xp-zivpn >> /var/log/xp-zivpn.log 2>&1" >> /var/spool/cron/crontabs/root
-if [ -f "/usr/local/sbin/limit-quota" ]; then
-    echo "*/5 * * * * /usr/local/sbin/limit-quota >> /dev/null 2>&1" >> /var/spool/cron/crontabs/root
-    chmod +x /usr/local/sbin/limit-quota
-fi
-service cron restart >/dev/null 2>&1
-
-# ==========================================
 #  8. FINALISASI & STARTING
 # ==========================================
 echo -e "\n${GREEN}[8/8] Menjalankan Service...${NC}"

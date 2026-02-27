@@ -1,0 +1,5 @@
+# Hapus session di dalam folder kyt
+rm -f /usr/bin/kyt/*.session
+
+# Hapus session di luar folder kyt (berjaga-jaga)
+rm -f /usr/bin/*.session

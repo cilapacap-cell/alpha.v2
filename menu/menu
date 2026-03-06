@@ -155,7 +155,7 @@ MYIP=$(curl -sS ipv4.icanhazip.com)
 echo ""
 
 # LICENSING CHECK (Sederhana)
-izinsc="https://raw.githubusercontent.com/hokagelegend9999/ijin/refs/heads/main/alpha"
+izinsc="https://raw.githubusercontent.com/cilapacap-cell/ijin/refs/heads/main/alpha"
 # Ambil semua data user sekali jalan untuk mengurangi request curl
 USER_DATA=$(curl -s ${izinsc} | grep $MYIP)
 username=$(echo "$USER_DATA" | awk '{print $2}')

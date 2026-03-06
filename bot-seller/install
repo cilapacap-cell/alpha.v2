@@ -26,7 +26,7 @@ export WH='\033[1;37m'
 # =============================================
 #            [ Konfigurasi URL & Izin ]
 # =============================================
-IPVPES="https://raw.githubusercontent.com/hokagelegend9999/ijin/refs/heads/main/alpha"
+IPVPES="https://raw.githubusercontent.com/cilapacap-cell/ijin/refs/heads/main/alpha"
 MYIP=$(curl -sS ipv4.icanhazip.com)
 DATE_SERVER=$(curl -v --insecure --silent https://google.com/ 2>&1 | grep Date | sed -e 's/< Date: //')
 TODAY=$(date +"%Y-%m-%d" -d "$DATE_SERVER")
